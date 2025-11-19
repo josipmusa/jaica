@@ -25,3 +25,6 @@ Thumbs.db
 
 # Ignore all windows .bat
 *.bat
+
+# Ignore chromadb
+vectorstore/
