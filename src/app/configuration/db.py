@@ -21,8 +21,8 @@ class STEmbeddingFunction(EmbeddingFunction):
     def embed_documents(self, texts):
         return self.model.encode(texts, convert_to_numpy=True).tolist()
 
-    def embed_query(self, text):
-        return self.model.encode([text], convert_to_numpy=True).tolist()[0]
+    def embed_query(self, input):
+        return self.model.encode([input], convert_to_numpy=True).tolist()[0]
 
     def __call__(self, input):
         # Case 1: Chroma sends {"documents": [...]}
@@ -94,8 +94,11 @@ class VectorDB:
         collection.add(documents=texts, metadatas=metadatas, ids=ids)
 
     def query(self, collection: Collection, query_text, n_results=5, where=None):
+        #Perform manual embedding here due to chromadb not invoking _call_ properly in embedding
+        embedding_vector = self.embedding_fn.embed_query(query_text)
         return collection.query(
-            query_texts=[query_text],
+            query_embeddings=[embedding_vector],
+            query_texts=None,
             n_results=n_results,
             where=where
         )

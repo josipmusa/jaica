@@ -15,5 +15,9 @@ class ChatRequest(BaseModel):
     prompt: str
     task_type: Optional[TaskType] = None
 
+class RagRequest(BaseModel):
+    prompt: str
+    project_name: str
+
 class ChatResponse(BaseModel):
     answer: str

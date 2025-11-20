@@ -12,9 +12,10 @@ def main(paths):
             print(f"[SKIP] Path does not exist or is not a directory: {folder}")
             continue
 
-        print(f"[START] Ingesting codebase: {folder}")
+        project_name = folder.name
+        print(f"[START] Ingesting codebase: {folder}, project name: {project_name}")
         try:
-            service.ingest_codebase(folder)
+            service.ingest_codebase(folder, project_name)
             print(f"[DONE] Ingested codebase: {folder}")
         except Exception as e:
             print(f"[ERROR] Failed to ingest {folder}: {e}")

@@ -14,7 +14,7 @@ class IngestionService:
         self.doc_overlap = doc_overlap
         self.batch_size = batch_size
 
-    def ingest_code_file(self, file_path: Path):
+    def ingest_code_file(self, file_path: Path, project_name: str):
         try:
             content = file_path.read_text(encoding="utf-8", errors="ignore")
         except Exception as e:
@@ -37,6 +37,7 @@ class IngestionService:
 
             metadata = {
                 "source": "code",
+                "project": project_name,
                 "file_path": str(file_path),
                 "start_line": start + 1,
                 "end_line": end,
@@ -71,7 +72,7 @@ class IngestionService:
                 ids=batch_ids
             )
 
-    def ingest_codebase(self, folder: Path):
+    def ingest_codebase(self, folder: Path, project_name: str):
         for file_path in folder.rglob("*"):
             # Skip ignored folders
             if any(ignored in file_path.parts for ignored in IGNORE_CODE_FOLDERS):
@@ -79,4 +80,4 @@ class IngestionService:
 
             if file_path.is_file() and file_path.suffix in CODE_EXTENSIONS:
                 print(f"Processing: {file_path}")
-                self.ingest_code_file(file_path)
+                self.ingest_code_file(file_path, project_name)
