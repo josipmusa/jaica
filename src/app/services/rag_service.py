@@ -9,7 +9,7 @@ class RagService:
 
     def generate_answer(self, rag_request: RagRequest):
         where_filter = {"project": rag_request.project_name} if rag_request.project_name else None
-        result = self.db.query(collection=db.code, query_text=rag_request.prompt, n_results=15, where=where_filter)
+        result = self.db.query(collection=db.code, query_text=rag_request.prompt, n_results=30, where=where_filter)
 
         docs = result["documents"][0]
         metas = result["metadatas"][0]

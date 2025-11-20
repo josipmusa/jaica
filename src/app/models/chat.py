@@ -17,7 +17,7 @@ class ChatRequest(BaseModel):
 
 class RagRequest(BaseModel):
     prompt: str
-    project_name: str
+    project_name: Optional[str] = None
 
 class ChatResponse(BaseModel):
     answer: str
