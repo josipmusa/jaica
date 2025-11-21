@@ -1,6 +1,6 @@
 from src.app.services.ollama_service import model_chat
 from fastapi import APIRouter
-from src.app.models.chat import ChatRequest, ChatResponse, RagRequest
+from src.app.dtos.chat import ChatRequest, ChatResponse, RagRequest
 from src.app.services.rag_service import RagService
 
 router = APIRouter()

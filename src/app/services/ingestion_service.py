@@ -1,7 +1,8 @@
 from pathlib import Path
 from src.app.configuration.db import db
+from src.app.models.code_classifier.code_classifier import CodeClassifier
 
-CODE_EXTENSIONS = {".py" : "python", ".js": "javascript", ".java": "java", ".ts": "typescript", ".cpp": "c++", ".c": "c", ".cs": "csharp"}
+SUPPORTED_CODE_EXTENSIONS = [".py", ".js", ".java", ".sql", ".html", ".php"]
 IGNORE_CODE_FOLDERS = {".git", "node_modules", "__pycache__", "venv", ".idea", "docker", ".mvn"}
 
 class IngestionService:
@@ -13,6 +14,9 @@ class IngestionService:
         self.doc_chunk_size = doc_chunk_size
         self.doc_overlap = doc_overlap
         self.batch_size = batch_size
+        model_url = "https://huggingface.co/josipmusa/code-classifier/resolve/main/code_classifier_traced.pt"
+        label_url = "https://huggingface.co/josipmusa/code-classifier/resolve/main/labels.json"
+        self.code_classifier = CodeClassifier(model_url, label_url)
 
     def ingest_code_file(self, file_path: Path, project_name: str):
         try:
@@ -21,8 +25,8 @@ class IngestionService:
             print(f"Skipping {file_path}: {e}")
             return
 
+        language = self.code_classifier.predict(content)
         lines = content.splitlines()
-        language = CODE_EXTENSIONS.get(file_path.suffix, "unknown")
         total_lines = len(lines)
         start = 0
         chunk_id = 0
@@ -34,7 +38,6 @@ class IngestionService:
         while start < total_lines:
             end = min(start + self.code_chunk_size, total_lines)
             chunk_text = "\n".join(lines[start:end])
-
             metadata = {
                 "source": "code",
                 "project": project_name,
@@ -78,6 +81,6 @@ class IngestionService:
             if any(ignored in file_path.parts for ignored in IGNORE_CODE_FOLDERS):
                 continue
 
-            if file_path.is_file() and file_path.suffix in CODE_EXTENSIONS:
+            if file_path.is_file() and file_path.suffix in SUPPORTED_CODE_EXTENSIONS:
                 print(f"Processing: {file_path}")
                 self.ingest_code_file(file_path, project_name)

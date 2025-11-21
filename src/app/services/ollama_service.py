@@ -1,6 +1,6 @@
 from ollama import chat, generate
 
-from src.app.models.chat import ChatRequest, TaskType
+from src.app.dtos.chat import ChatRequest, TaskType
 
 MODEL_NAME = 'qwen2.5:3b-instruct'
 

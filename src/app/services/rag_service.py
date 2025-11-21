@@ -1,6 +1,6 @@
 import textwrap
 from src.app.configuration.db import db
-from src.app.models.chat import RagRequest
+from src.app.dtos.chat import RagRequest
 from src.app.services.ollama_service import ask
 
 class RagService:
@@ -21,7 +21,7 @@ class RagService:
         top_chunks = chunks_with_distance[:10]
 
         chunks = [
-            f"[Source: {meta['file_path']}]\n{doc}"
+            f"[Source: {meta['file_path']} | Language: {meta['language']}]\n{doc}"
             for doc, meta, _ in top_chunks
         ]
 
