@@ -8,10 +8,11 @@ from transformers import AutoTokenizer
 
 import config
 from model import CodeClassifier
+from build_dataset import build_dataset_if_missing
 
 
 def _load_training_data(tokenizer):
-    data = pd.read_csv("code_type_dataset_full.csv")
+    data = pd.read_csv(config.OUTPUT_CSV)
     code_snippets = data['code_snippet']
     labels = data['label'].values
 
@@ -23,7 +24,7 @@ def _load_training_data(tokenizer):
     encoded_inputs = tokenizer(code_snippets.tolist(),
                                padding=True,
                                truncation=True,
-                               max_length=128,
+                               max_length=config.MAX_TOKEN_LENGTH,
                                return_tensors="pt")
 
     input_ids = encoded_inputs["input_ids"]
@@ -44,6 +45,7 @@ def _load_training_data(tokenizer):
 def train():
     # load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(config.BACKBONE_MODEL_NAME)
+    build_dataset_if_missing(tokenizer)
     train_loader, val_loader = _load_training_data(tokenizer)
     model = CodeClassifier().to(config.DEVICE)
 

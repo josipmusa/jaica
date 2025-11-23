@@ -23,6 +23,7 @@ Thumbs.db
 # Ignore all saved models
 *.pth
 *.pt
+*.onnx
 labels.json
 
 # Ignore all windows .bat

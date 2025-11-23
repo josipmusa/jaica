@@ -6,10 +6,21 @@ model = CodeClassifier().to(config.DEVICE)
 model.load_state_dict(torch.load(config.MODEL_PATH, map_location=config.DEVICE))
 model.eval()
 
-# Dummy input for tracing
-dummy_input_ids = torch.randint(0, 1000, (1, 128)).to(config.DEVICE)
-dummy_attention_mask = torch.ones((1, 128), dtype=torch.long).to(config.DEVICE)
+dummy_input_ids = torch.randint(0, 1000, (1, config.MAX_TOKEN_LENGTH)).to(config.DEVICE)
+dummy_attention_mask = torch.ones((1, config.MAX_TOKEN_LENGTH), dtype=torch.long).to(config.DEVICE)
 
-traced_model = torch.jit.trace(model, (dummy_input_ids, dummy_attention_mask))
-traced_model.save("code_classifier_traced.pt")
-print("Model exported as TorchScript!")
+torch.onnx.export(
+    model,
+    (dummy_input_ids, dummy_attention_mask),
+    "code_classifier.onnx",
+    input_names=["input_ids", "attention_mask"],
+    output_names=["logits"],
+    dynamic_axes={
+        "input_ids": {0: "batch"},
+        "attention_mask": {0: "batch"},
+        "logits": {0: "batch"}
+    },
+    opset_version=17
+)
+
+print("ONNX export complete!")
