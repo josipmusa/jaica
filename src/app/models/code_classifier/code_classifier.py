@@ -33,9 +33,6 @@ class CodeClassifier:
         with open(label_path) as f:
             self.classes = json.load(f)
 
-    #Predics the language of a full file, splitting trained-size chunks (128)
-    def predict_file(self, file_content: str) -> str:
-        lines = file_content.splitlines()
 
     def predict(self, code_snippet: str) -> str:
         encoded = self.tokenizer(
