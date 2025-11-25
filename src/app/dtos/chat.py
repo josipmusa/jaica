@@ -11,6 +11,9 @@ class TaskType(str, Enum):
     WRITE_TESTS = "Write tests"
     OPTIMIZE_CODE = "Optimize code"
 
+class AnalyzeCodeRequest(BaseModel):
+    code_snippet: str
+
 class ChatRequest(BaseModel):
     prompt: str
     task_type: Optional[TaskType] = None

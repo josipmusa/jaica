@@ -8,7 +8,6 @@ def model_chat(chat_request: ChatRequest) -> str:
     prompt = chat_request.prompt
     if chat_request.task_type is not None:
         prompt = _format_prompt(prompt, chat_request.task_type)
-
     try :
         answer = chat(model=MODEL_NAME, messages=[{'role': 'user', 'content': prompt}])
         return answer.message.content

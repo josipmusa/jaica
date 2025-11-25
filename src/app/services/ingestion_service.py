@@ -1,12 +1,13 @@
 from pathlib import Path
-from src.app.configuration.db import db
+
+from src.app.configuration.db import VectorDB
 from src.app.models.code_classifier.code_classifier import CodeClassifier
 
 SUPPORTED_CODE_EXTENSIONS = [".py", ".js", ".java", ".sql", ".html", ".php"]
 IGNORE_CODE_FOLDERS = {".git", "node_modules", "__pycache__", "venv", ".idea", "docker", ".mvn"}
 
 class IngestionService:
-    def __init__(self, code_chunk_size: int = 50, code_overlap: int = 10,
+    def __init__(self, db: VectorDB, code_classifier: CodeClassifier, code_chunk_size: int = 50, code_overlap: int = 10,
                  doc_chunk_size: int = 500, doc_overlap: int = 50,
                  batch_size: int = 16):
         self.code_chunk_size = code_chunk_size
@@ -14,9 +15,8 @@ class IngestionService:
         self.doc_chunk_size = doc_chunk_size
         self.doc_overlap = doc_overlap
         self.batch_size = batch_size
-        model_url = "https://huggingface.co/josipmusa/code-classifier/resolve/main/code_classifier_traced.pt"
-        label_url = "https://huggingface.co/josipmusa/code-classifier/resolve/main/labels.json"
-        self.code_classifier = CodeClassifier(model_url, label_url)
+        self.code_classifier = code_classifier
+        self.db = db
 
     def ingest_code_file(self, file_path: Path, project_name: str):
         try:
@@ -56,8 +56,8 @@ class IngestionService:
 
             # If batch is full, insert it
             if len(batch_texts) >= self.batch_size:
-                db.insert(
-                    collection=db.code,
+                self.db.insert(
+                    collection=self.db.code,
                     texts=batch_texts,
                     metadatas=batch_metadatas,
                     ids=batch_ids
@@ -68,8 +68,8 @@ class IngestionService:
 
         # Insert any remaining chunks
         if batch_texts:
-            db.insert(
-                collection=db.code,
+            self.db.insert(
+                collection=self.db.code,
                 texts=batch_texts,
                 metadatas=batch_metadatas,
                 ids=batch_ids

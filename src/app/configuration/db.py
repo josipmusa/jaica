@@ -102,6 +102,3 @@ class VectorDB:
             n_results=n_results,
             where=where
         )
-
-
-db = VectorDB(persist_dir=str(VECTORSTORE_PATH))

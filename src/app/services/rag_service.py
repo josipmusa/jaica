@@ -1,15 +1,16 @@
 import textwrap
-from src.app.configuration.db import db
+
+from src.app.configuration.db import VectorDB
 from src.app.dtos.chat import RagRequest
 from src.app.services.ollama_service import ask
 
 class RagService:
-    def __init__(self):
+    def __init__(self, db: VectorDB):
         self.db = db
 
     def generate_answer(self, rag_request: RagRequest):
         where_filter = {"project": rag_request.project_name} if rag_request.project_name else None
-        result = self.db.query(collection=db.code, query_text=rag_request.prompt, n_results=30, where=where_filter)
+        result = self.db.query(collection=self.db.code, query_text=rag_request.prompt, n_results=30, where=where_filter)
 
         docs = result["documents"][0]
         metas = result["metadatas"][0]
