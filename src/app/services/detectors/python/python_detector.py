@@ -1,18 +1,11 @@
-from .smell_long_function import detect_long_functions
-from .smell_deep_nesting import detect_deep_nesting
-from .smell_many_params import detect_many_params
-from .smell_duplicate_code import detect_duplicate_code
-from .smell_unused_vars import detect_unused_vars
-from ..parsers import load_parser
+from src.app.services.detectors.python.smell_long_function import detect_long_functions
+from src.app.services.detectors.python.smell_deep_nesting import detect_deep_nesting
+from src.app.services.detectors.python.smell_many_params import detect_many_params
+from src.app.services.detectors.python.smell_duplicate_code import detect_duplicate_code
+from src.app.services.detectors.python.smell_unused_vars import detect_unused_vars
+from src.app.services.detectors.parsers import load_parser
 
 def analyze_python(code: str, file_name = "<input>"):
-    from .smell_long_function import detect_long_functions
-    from .smell_deep_nesting import detect_deep_nesting
-    from .smell_many_params import detect_many_params
-    from .smell_duplicate_code import detect_duplicate_code
-    from .smell_unused_vars import detect_unused_vars
-    from ..parsers import load_parser
-
     parser = load_parser("python")
     tree = parser.parse(code.encode())
 
