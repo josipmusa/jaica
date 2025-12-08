@@ -1,16 +1,16 @@
 import textwrap
 
 from src.app.configuration.db import VectorDB
-from src.app.dtos.chat import RagRequest
-from src.app.services.ollama_service import ask
+from src.app.dtos.chat import PromptRequest
+from src.app.services.llm_service import ask
 
 class RagService:
     def __init__(self, db: VectorDB):
         self.db = db
 
-    def generate_answer(self, rag_request: RagRequest):
-        where_filter = {"project": rag_request.project_name} if rag_request.project_name else None
-        result = self.db.query(collection=self.db.code, query_text=rag_request.prompt, n_results=30, where=where_filter)
+    def generate_answer(self, prompt_request: PromptRequest) -> str:
+        where_filter = {"project": prompt_request.project_name} if prompt_request.project_name else None
+        result = self.db.query(collection=self.db.code, query_text=prompt_request.prompt, n_results=30, where=where_filter)
 
         docs = result["documents"][0]
         metas = result["metadatas"][0]
@@ -37,7 +37,7 @@ If the answer is not in the context, respond with EXACTLY: "I don't know".
 {context_text}
 
 ### Question:
-{rag_request.prompt}
+{prompt_request.prompt}
 
 ### Answer:
 """

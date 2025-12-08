@@ -1,21 +1,15 @@
-from src.app.configuration.dependencies import get_rag_service, get_code_analyzer
+from src.app.configuration.dependencies import get_code_analyzer, get_pipeline_router
 from src.app.services.code_analysis_service import CodeAnalyzer
-from src.app.services.ollama_service import model_chat
 from fastapi import APIRouter, Depends
-from src.app.dtos.chat import ChatRequest, ChatResponse, RagRequest, AnalyzeCodeRequest
-from src.app.services.rag_service import RagService
+from src.app.dtos.chat import PromptRequest, AnalyzeCodeRequest
+from src.app.services.pipeline_router import PipelineRouter
 
 router = APIRouter()
 
-@router.post('/chat')
-def chat_endpoint(chat_request: ChatRequest):
-    model_response = model_chat(chat_request)
-    return ChatResponse(answer=model_response)
-
-@router.post('/rag-query')
-def rag_query_endpoint(rag_request: RagRequest, rag_service: RagService = Depends(get_rag_service)):
-    answer = rag_service.generate_answer(rag_request)
-    return ChatResponse(answer=answer)
+@router.post('/query')
+def query_endpoint(prompt_request: PromptRequest, pipeline_router: PipelineRouter = Depends(get_pipeline_router)):
+    response = pipeline_router.route_prompt(prompt_request)
+    return response
 
 @router.post('/analyze-code')
 def analyze_code_endpoint(analyze_code_request: AnalyzeCodeRequest, code_analysis_service: CodeAnalyzer = Depends(get_code_analyzer)):
