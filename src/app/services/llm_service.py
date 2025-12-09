@@ -31,3 +31,17 @@ def classify(prompt: str) -> Intent:
 
     print(f"Intent is {intent}")
     return intent
+
+def summarize_code(code: str) -> str:
+    prompt = f"""
+You are a helpful programming assistant.
+Summarize the following code in 1-2 sentences, focusing on its purpose and functionality:
+{code}
+Summary:"""
+    try:
+        answer = generate(model=MAIN_LLM_MODEL, prompt=prompt)
+        summary = answer.response.strip()
+        return summary
+    except Exception as e:
+        print(f"Error summarizing code: {e}")
+        return "Unable to summarize"

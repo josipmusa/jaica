@@ -19,7 +19,7 @@ class RagService:
         # Re-rank using distances (smaller distance = more similar)
         chunks_with_distance = list(zip(docs, metas, distances))
         chunks_with_distance.sort(key=lambda x: x[2])  # ascending distance
-        top_chunks = chunks_with_distance[:10]
+        top_chunks = chunks_with_distance[:5]
 
         chunks = [
             f"[Source: {meta['file_path']} | Language: {meta['language']}]\n{doc}"
