@@ -10,10 +10,10 @@ class PipelineRouter:
     def route_prompt(self, prompt_request: PromptRequest) -> ModelResponse:
         intent = classify(prompt_request.prompt)
 
-        if intent in {Intent.GENERAL, Intent.HYBRID}:
+        if intent in {Intent.GENERAL, Intent.CODE_HYBRID}:
             answer = general_model_chat(prompt_request.prompt)
             return ModelResponse(answer=answer, intent=intent)
-        elif intent in {Intent.CODE_RETRIEVAL, Intent.DOCS_RETRIEVAL}:
+        elif intent in {Intent.CODE_VECTOR_RETRIEVAL, Intent.DOCS_VECTOR_RETRIEVAL}:
             answer = self.rag_service.generate_answer(prompt_request)
             return ModelResponse(answer=answer, intent=intent)
         else:

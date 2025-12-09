@@ -1,10 +1,10 @@
 from enum import Enum
 
 class Intent(str, Enum):
-    CODE_REASONING = "CODE_REASONING" #AST, deps, relationships, flow
-    CODE_RETRIEVAL = "CODE_RETRIEVAL" #vector RAG code collection
-    DOCS_RETRIEVAL = "DOCS_RETRIEVAL" #vector RAG docs collection
-    HYBRID = "HYBRID" #when both reasoning & raw code needed
+    CODE_GRAPH_REASONING   = "CODE_GRAPH_REASONING  " #AST, deps, relationships, flow
+    CODE_VECTOR_RETRIEVAL   = "CODE_VECTOR_RETRIEVAL  " #vector RAG code collection
+    DOCS_VECTOR_RETRIEVAL = "DOCS_VECTOR_RETRIEVAL" #vector RAG docs collection
+    CODE_HYBRID = "CODE_HYBRID" #when both reasoning & raw code needed
     GENERAL = "GENERAL" #no RAG/graph needed
 
     @classmethod
