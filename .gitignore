@@ -30,4 +30,7 @@ labels.json
 *.bat
 
 # Ignore chromadb
-vectorstore/
+vectorstore
+
+# Ignore env
+.env
