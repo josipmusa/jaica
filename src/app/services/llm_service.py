@@ -24,7 +24,6 @@ def classify(prompt: str) -> Intent:
     ])
 
     label = llm_response.message.content.strip().upper().replace('"', '')
-
     intent = Intent.from_str(label)
     if intent is None:
         intent = Intent.GENERAL
