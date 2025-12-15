@@ -1,9 +1,14 @@
+from typing import List
+
 from src.app.configuration.graph_db import GraphDB
+from src.app.dtos.graph import GraphOperation
+
 
 class GraphDBService:
     def __init__(self, graph_db: GraphDB):
         self.graph_db = graph_db
         self._create_constraints()
+        self._create_indexes()
 
     def _create_constraints(self):
         """Ensures schema exists — executed once at startup."""
@@ -12,6 +17,17 @@ class GraphDBService:
             FOR (n:CodeNode)
             REQUIRE n.node_id IS UNIQUE
         """)
+
+    def _create_indexes(self):
+        self.graph_db.run("""
+                          CREATE INDEX code_node_id IF NOT EXISTS FOR (n:CodeNode) ON (n.node_id)
+                          """)
+        self.graph_db.run("""
+                          CREATE INDEX code_node_name IF NOT EXISTS FOR (n:CodeNode) ON (n.node_name)
+                          """)
+        self.graph_db.run("""
+                          CREATE INDEX code_project IF NOT EXISTS FOR (n:CodeNode) ON (n.project_name)
+                          """)
 
     def upsert_node(
             self,
@@ -90,3 +106,39 @@ class GraphDBService:
             # result["n"] is a Node object from neo4j driver
             return dict(result["n"])
         return None
+
+    def find_nodes_by_name(
+            self,
+            name: str,
+            project_name: str,
+            limit: int = 5,
+    ) -> List[dict]:
+        query = """
+           MATCH (n:CodeNode)
+           WHERE n.project = $project_name
+             AND (
+               n.node_name = $name
+               OR n.node_id ENDS WITH $name
+             )
+           RETURN n
+           LIMIT $limit
+           """
+
+        return self.graph_db.run_get_list(query=query, name=name, project_name=project_name, limit=limit)
+
+    def traverse(
+            self,
+            node_id: str,
+            operation: GraphOperation,
+            max_depth: int = 10,
+    ) -> List[dict]:
+
+        #TODO implement call edges
+        # For now, all operations fallback to CONTAINS
+        query = f"""
+           MATCH (n:CodeNode {{node_id: $node_id}})
+           MATCH (n)-[:CONTAINS*1..{max_depth}]->(m)
+           RETURN DISTINCT m
+           """
+
+        return self.graph_db.run_get_list_by_node_id(query, node_id)

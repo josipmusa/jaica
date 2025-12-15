@@ -1,7 +1,11 @@
+import json
+import re
+
 from ollama import chat, generate
 
+from src.app.dtos.graph import GraphQueryPlan
 from src.app.dtos.intent import Intent
-from src.app.configuration.config import MAIN_LLM_MODEL, CLASSIFIER_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT
+from src.app.configuration.config import MAIN_LLM_MODEL, CLASSIFIER_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT, GRAPH_SYMBOL_EXTRACTION_SYSTEM_PROMPT
 
 def general_model_chat(prompt: str) -> str:
     try :
@@ -31,6 +35,39 @@ def classify(prompt: str) -> Intent:
     print(f"Intent is {intent}")
     return intent
 
+
+def extract_graph_query_plan(prompt: str) -> GraphQueryPlan | None:
+    llm_response = chat(
+        model=MAIN_LLM_MODEL,
+        messages=[
+            {"role": "system", "content": GRAPH_SYMBOL_EXTRACTION_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ])
+
+    raw = llm_response.message.content.strip()
+    raw = re.sub(r"^```json\s*|\s*```$", "", raw, flags=re.IGNORECASE).strip()
+
+    raw = _extract_json_object(raw)
+    if not raw:
+        return None
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+
+    if not data.get("symbols"):
+        return None
+
+    if "operation" in data:
+        data["operation"] = data["operation"].lower()
+
+    try:
+        return GraphQueryPlan.model_validate(data)
+    except Exception:
+        return None
+
+
 def summarize_code(code: str) -> str:
     prompt = f"""
 You are a helpful programming assistant.
@@ -44,3 +81,10 @@ Summary:"""
     except Exception as e:
         print(f"Error summarizing code: {e}")
         return "Unable to summarize"
+
+def _extract_json_object(raw: str) -> str | None:
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start == -1 or end == -1 or end < start:
+        return None
+    return raw[start:end + 1]

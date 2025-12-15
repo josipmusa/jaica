@@ -2,7 +2,7 @@ from src.app.configuration.dependencies import get_code_analyzer, get_pipeline_r
 from src.app.services.code_analysis_service import CodeAnalyzer
 from fastapi import APIRouter, Depends
 from src.app.dtos.chat import PromptRequest, AnalyzeCodeRequest
-from src.app.services.pipeline_router import PipelineRouter
+from src.app.services.pipelines.pipeline_router import PipelineRouter
 
 router = APIRouter()
 

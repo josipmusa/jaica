@@ -4,11 +4,11 @@ from src.app.configuration.db import VectorDB
 from src.app.dtos.chat import PromptRequest
 from src.app.services.llm_service import ask
 
-class RagService:
+class RagPipeline:
     def __init__(self, db: VectorDB):
         self.db = db
 
-    def generate_answer(self, prompt_request: PromptRequest) -> str:
+    def run(self, prompt_request: PromptRequest) -> str:
         where_filter = {"project": prompt_request.project_name} if prompt_request.project_name else None
         result = self.db.query(collection=self.db.code, query_text=prompt_request.prompt, n_results=30, where=where_filter)
 
