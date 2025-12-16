@@ -158,10 +158,11 @@ Valid operations:
 - called_by
 - usage
 - structure
+- dependencies
 
 JSON schema:
 {
   "symbols": ["string"],
-  "operation": "calls | called_by | usage | structure"
+  "operation": "calls | called_by | usage | structure | dependencies"
 }
 """

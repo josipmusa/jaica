@@ -83,15 +83,14 @@ class GraphReasoningPipeline:
         return "\n".join(lines)
 
     def _reason(self, user_prompt: str, contexts: List[str]) -> str:
-            prompt = f"""
-    You are a senior software engineer analyzing a codebase.
+        prompt = f"""
+    You are a senior software engineer. Answer the user's question using the provided code information. 
+Do not mention the code or the fact that it was provided to you; just answer concisely and authoritatively.
 
-    User question:
-    {user_prompt}
+User question:
+{user_prompt}
 
-    Relevant code structure:
-    {chr(10).join(contexts)}
-
-    Answer clearly and concisely.
+Code information:
+{chr(10).join(contexts)}
     """
-            return general_model_chat(prompt)
+        return general_model_chat(prompt)

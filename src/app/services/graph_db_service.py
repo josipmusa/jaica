@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from src.app.configuration.graph_db import GraphDB
 from src.app.dtos.graph import GraphOperation
@@ -10,8 +10,11 @@ class GraphDBService:
         self._create_constraints()
         self._create_indexes()
 
+    # -------------------------
+    # Schema
+    # -------------------------
+
     def _create_constraints(self):
-        """Ensures schema exists — executed once at startup."""
         self.graph_db.run("""
             CREATE CONSTRAINT code_node_id_unique IF NOT EXISTS
             FOR (n:CodeNode)
@@ -20,19 +23,31 @@ class GraphDBService:
 
     def _create_indexes(self):
         self.graph_db.run("""
-                          CREATE INDEX code_node_id IF NOT EXISTS FOR (n:CodeNode) ON (n.node_id)
+                          CREATE INDEX code_node_id IF NOT EXISTS
+                              FOR (n:CodeNode) ON (n.node_id)
                           """)
         self.graph_db.run("""
-                          CREATE INDEX code_node_name IF NOT EXISTS FOR (n:CodeNode) ON (n.node_name)
+                          CREATE INDEX code_node_name IF NOT EXISTS
+                              FOR (n:CodeNode) ON (n.node_name)
                           """)
         self.graph_db.run("""
-                          CREATE INDEX code_project IF NOT EXISTS FOR (n:CodeNode) ON (n.project_name)
+                          CREATE INDEX code_node_project IF NOT EXISTS
+                              FOR (n:CodeNode) ON (n.project)
                           """)
+        self.graph_db.run("""
+                          CREATE INDEX code_node_symbols_defined IF NOT EXISTS
+                              FOR (n:CodeNode) ON (n.symbols_defined)
+                          """)
+
+    # -------------------------
+    # Node operations
+    # -------------------------
 
     def upsert_node(
             self,
             node_id: str,
             node_name: str,
+            node_kind: str,
             node_type: str,
             language: str,
             file_path: str,
@@ -40,30 +55,29 @@ class GraphDBService:
             start_line: int,
             end_line: int,
             summary: str,
-            node_hash: str = None
+            symbols_defined: list[str],
+            symbols_used: list[str],
+            node_hash: str | None = None,
     ):
-        """
-        Create or update a code node.
-        MERGE is done only on the immutable ID field.
-        Other properties are SET so they can be updated during re-ingestion.
-        """
         query = """
         MERGE (n:CodeNode {node_id: $node_id})
-        SET n.node_name   = $node_name,
-            n.node_type   = $node_type,
-            n.language    = $language,
-            n.file_path   = $file_path,
-            n.project     = $project,
-            n.start_line  = $start_line,
-            n.end_line    = $end_line,
-            n.summary     = $summary
+        SET n.node_name       = $node_name,
+            n.node_kind       = $node_kind,
+            n.node_type       = $node_type,
+            n.language        = $language,
+            n.file_path       = $file_path,
+            n.project         = $project,
+            n.start_line      = $start_line,
+            n.end_line        = $end_line,
+            n.summary         = $summary,
+            n.symbols_defined = $symbols_defined,
+            n.symbols_used    = $symbols_used
         """
-        if node_hash:
-            query += "\nSET n.node_hash = $node_hash"
 
         params = {
             "node_id": node_id,
             "node_name": node_name,
+            "node_kind": node_kind,
             "node_type": node_type,
             "language": language,
             "file_path": file_path,
@@ -71,41 +85,113 @@ class GraphDBService:
             "start_line": start_line,
             "end_line": end_line,
             "summary": summary,
+            "symbols_defined": symbols_defined,
+            "symbols_used": symbols_used,
         }
+
         if node_hash:
+            query += "\nSET n.node_hash = $node_hash"
             params["node_hash"] = node_hash
 
         self.graph_db.run(query, params)
 
-    def link_parent(self, parent_id: str, child_id: str):
-        """
-        Link a parent node to a child node.
-        Creates parent node if it does not exist.
-        """
-        query = """
-        MATCH (child:CodeNode {node_id: $child_id})
-        MERGE (parent:CodeNode {node_id: $parent_id})
-        MERGE (parent)-[:CONTAINS]->(child)
-        """
-        self.graph_db.run(query, {
-            "child_id": child_id,
-            "parent_id": parent_id
-        })
+    def upsert_project(self, project_name: str):
+        self.graph_db.run(
+            """
+            MERGE (p:Project {name: $name})
+            """,
+            {"name": project_name},
+        )
 
-    def get_node(self, node_id: str) -> dict | None:
-        """
-        Retrieve a node by its ID.
-        Returns a dict of properties if found, else None.
-        """
+    def get_node(self, node_id: str) -> Optional[dict]:
         query = """
         MATCH (n:CodeNode {node_id: $node_id})
-        RETURN n LIMIT 1
+        RETURN n
         """
-        result = self.graph_db.run_get_single(query, {"node_id": node_id})
-        if result:
-            # result["n"] is a Node object from neo4j driver
-            return dict(result["n"])
-        return None
+        params = {
+            "node_id": node_id
+        }
+        result = self.graph_db.run(query, params)
+        result = result.single()
+        return dict(result["n"]) if result else None
+
+    def resolve_symbol(
+            self,
+            symbol: str,
+            project_name: str,
+            limit: int = 5,
+    ) -> list[dict]:
+        """
+        Resolves a symbol to nodes that define it.
+        """
+        query = """
+        MATCH (n:CodeNode)
+        WHERE n.project = $project
+          AND $symbol IN n.symbols_defined
+        RETURN n
+        LIMIT $limit
+        """
+        params = {
+            "symbol": symbol,
+            "project": project_name,
+            "limit": limit
+        }
+        result = self.graph_db.run(query, params)
+        return [record["n"] for record in result]
+
+    # -------------------------
+    # Relationships
+    # -------------------------
+
+    def link(
+            self,
+            from_node_id: str,
+            to_node_id: str,
+            rel_type: str,
+            properties: dict | None = None,
+    ):
+        props = ""
+        if properties:
+            props = " SET r += $props"
+
+        query = f"""
+        MATCH (a:CodeNode {{node_id: $from}})
+        MATCH (b:CodeNode {{node_id: $to}})
+        MERGE (a)-[r:{rel_type}]->(b)
+        {props}
+        """
+
+        self.graph_db.run(
+            query,
+            {
+                "from": from_node_id,
+                "to": to_node_id,
+                "props": properties or {},
+            },
+        )
+
+    def link_project_to_node(
+            self,
+            project_name: str,
+            node_id: str,
+            rel_type: str,
+            properties: dict | None = None,
+    ):
+        props = " SET r += $props" if properties else ""
+        query = f"""
+        MATCH (p:Project {{name: $project}})
+        MATCH (n:CodeNode {{node_id: $node}})
+        MERGE (p)-[r:{rel_type}]->(n)
+        {props}
+        """
+        self.graph_db.run(
+            query,
+            {"project": project_name, "node": node_id, "props": properties or {}},
+        )
+
+    # -------------------------
+    # Query helpers
+    # -------------------------
 
     def find_nodes_by_name(
             self,
@@ -114,31 +200,68 @@ class GraphDBService:
             limit: int = 5,
     ) -> List[dict]:
         query = """
-           MATCH (n:CodeNode)
-           WHERE n.project = $project_name
-             AND (
-               n.node_name = $name
-               OR n.node_id ENDS WITH $name
-             )
-           RETURN n
-           LIMIT $limit
-           """
+        MATCH (n:CodeNode)
+        WHERE n.project = $project
+          AND (
+            n.node_name = $name
+            OR n.node_id ENDS WITH $name
+          )
+        RETURN n
+        LIMIT $limit
+        """
 
-        return self.graph_db.run_get_list(query=query, name=name, project_name=project_name, limit=limit)
+        params = {
+            "name": name,
+            "project": project_name,
+            "limit": limit
+        }
+
+        result = self.graph_db.run(query, params)
+        return [record["n"] for record in result]
+
+    # -------------------------
+    # Traversal
+    # -------------------------
 
     def traverse(
             self,
             node_id: str,
             operation: GraphOperation,
-            max_depth: int = 10,
-    ) -> List[dict]:
+            max_depth: int = 5,
+    ) -> list[dict]:
 
-        #TODO implement call edges
-        # For now, all operations fallback to CONTAINS
+        if operation == GraphOperation.STRUCTURE:
+            rel = "CONTAINS"
+            direction = ">"
+        elif operation == GraphOperation.CALLS:
+            rel = "CALLS"
+            direction = ">"
+        elif operation == GraphOperation.CALLED_BY:
+            rel = "CALLS"
+            direction = "<"
+        elif operation == GraphOperation.USAGE:
+            rel = "USES"
+            direction = ">"
+        elif operation == GraphOperation.DEPENDENCIES:
+            rel = "USES|CALLS"
+            direction = ">"
+        else:
+            raise ValueError(operation)
+
+        arrow = f"-[:{rel}*1..{max_depth}]-"
+        if direction == ">":
+            arrow = f"-[:{rel}*1..{max_depth}]->"
+        elif direction == "<":
+            arrow = f"<-[:{rel}*1..{max_depth}]-"
+
         query = f"""
-           MATCH (n:CodeNode {{node_id: $node_id}})
-           MATCH (n)-[:CONTAINS*1..{max_depth}]->(m)
-           RETURN DISTINCT m
-           """
+        MATCH (n:CodeNode {{node_id: $node_id}})
+        MATCH (n){arrow}(m)
+        RETURN DISTINCT m
+        """
 
-        return self.graph_db.run_get_list_by_node_id(query, node_id)
+        params = {
+            "node_id": node_id
+        }
+        result = self.graph_db.run(query, params)
+        return [record["n"] for record in result]

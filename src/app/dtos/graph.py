@@ -7,6 +7,7 @@ class GraphOperation(str, Enum):
     CALLED_BY = "called_by"
     USAGE = "usage"
     STRUCTURE = "structure"
+    DEPENDENCIES = "dependencies"
 
 class GraphQueryPlan(BaseModel):
     symbols: List[str]
