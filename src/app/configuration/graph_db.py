@@ -21,3 +21,13 @@ class GraphDB:
     def run(self, query: str, params: dict = None):
         with self.driver.session() as session:
             return session.run(query, params or {})
+
+    def run_get_single(self, query: str, params: dict = None):
+        with self.driver.session() as session:
+            result = session.run(query, params or {})
+            return result.single()
+
+    def run_get_list(self, query: str, params: dict = None):
+        with self.driver.session() as session:
+            result = session.run(query, params or {})
+            return [record["n"] for record in result]

@@ -111,8 +111,7 @@ class GraphDBService:
         params = {
             "node_id": node_id
         }
-        result = self.graph_db.run(query, params)
-        result = result.single()
+        result = self.graph_db.run_get_single(query, params)
         return dict(result["n"]) if result else None
 
     def resolve_symbol(
@@ -136,8 +135,7 @@ class GraphDBService:
             "project": project_name,
             "limit": limit
         }
-        result = self.graph_db.run(query, params)
-        return [record["n"] for record in result]
+        return self.graph_db.run_get_list(query, params)
 
     # -------------------------
     # Relationships
@@ -216,8 +214,7 @@ class GraphDBService:
             "limit": limit
         }
 
-        result = self.graph_db.run(query, params)
-        return [record["n"] for record in result]
+        return self.graph_db.run_get_list(query, params)
 
     # -------------------------
     # Traversal
@@ -263,5 +260,5 @@ class GraphDBService:
         params = {
             "node_id": node_id
         }
-        result = self.graph_db.run(query, params)
-        return [record["n"] for record in result]
+
+        return self.graph_db.run_get_list(query, params)
