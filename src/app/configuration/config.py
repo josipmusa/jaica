@@ -156,13 +156,13 @@ Rules:
 Valid operations:
 - calls
 - called_by
-- usage
+- uses
 - structure
 - dependencies
 
 JSON schema:
 {
   "symbols": ["string"],
-  "operation": "calls | called_by | usage | structure | dependencies"
+  "operation": "calls | called_by | uses | structure | dependencies"
 }
 """

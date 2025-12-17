@@ -11,9 +11,9 @@ from src.app.services.pipelines.rag_pipeline import RagPipeline
 code_classifier_instance = CodeClassifier(config.CODE_CLASSIFIER_MODEL_URL, config.CODE_CLASSIFIER_LABEL_URL)
 db_instance = VectorDB(persist_dir=str(config.VECTORSTORE_PATH))
 graph_db_instance = GraphDB()
-graph_db_service = GraphDBService(graph_db=graph_db_instance)
+graph_db_service_instance = GraphDBService(graph_db=graph_db_instance)
 rag_pipeline_instance = RagPipeline(db=db_instance)
-graph_reasoning_pipeline_instance = GraphReasoningPipeline(graph_db_service=graph_db_service)
+graph_reasoning_pipeline_instance = GraphReasoningPipeline(graph_db_service=graph_db_service_instance)
 code_analyzer_instance = CodeAnalyzer(code_classifier=code_classifier_instance)
 pipeline_router_instance = PipelineRouter(rag_pipeline=rag_pipeline_instance, graph_reasoning_pipeline=graph_reasoning_pipeline_instance)
 
@@ -37,7 +37,7 @@ def get_graph_db() -> GraphDB:
     return graph_db_instance
 
 def get_graph_db_service() -> GraphDBService:
-    return graph_db_service
+    return graph_db_service_instance
 
 def get_graph_reasoning_pipeline() -> GraphReasoningPipeline:
     return graph_reasoning_pipeline_instance

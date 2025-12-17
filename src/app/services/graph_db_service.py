@@ -39,9 +39,6 @@ class GraphDBService:
                               FOR (n:CodeNode) ON (n.symbols_defined)
                           """)
 
-    # -------------------------
-    # Node operations
-    # -------------------------
 
     def upsert_node(
             self,
@@ -113,6 +110,26 @@ class GraphDBService:
         }
         result = self.graph_db.run_get_single(query, params)
         return dict(result["n"]) if result else None
+
+    def get_nodes_by_project(self, project_name: str) -> List[dict]:
+        query = """
+        MATCH (n:CodeNode)
+        WHERE n.project = $project
+        RETURN n
+        """
+
+        params = {
+            "project": project_name
+        }
+        return self.graph_db.run_get_list(query, params)
+
+    def project_exists(self, project_name: str) -> bool:
+        query = """
+        MATCH (p:Project {name: $name})
+        RETURN count(p) > 0 AS exists
+        """
+        result = self.graph_db.run_get_single(query, {"name": project_name})
+        return result["exists"]
 
     def resolve_symbol(
             self,
@@ -186,6 +203,30 @@ class GraphDBService:
             query,
             {"project": project_name, "node": node_id, "props": properties or {}},
         )
+
+    def link_batch(self, links: list[dict]):
+        """
+        Each link:
+        {
+            "from": str,
+            "to": str,
+            "type": str,
+            "confidence": float,
+            "source": str,
+            "props": dict
+        }
+        """
+
+        query = """
+        UNWIND $links AS link
+        MATCH (a:CodeNode {node_id: link.from})
+        MATCH (b:CodeNode {node_id: link.to})
+        WHERE a <> b
+        MERGE (a)-[r:SEMANTIC_LINK {type: link.type}]->(b)
+        SET r += link.props
+        """
+
+        self.graph_db.run(query, {"links": links})
 
     # -------------------------
     # Query helpers

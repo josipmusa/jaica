@@ -1,11 +1,11 @@
 import traceback
 from pathlib import Path
 import sys
-from src.app.services.ingestion.ingestion_service import IngestionService
-from src.app.configuration.dependencies import get_db, get_code_classifier, get_graph_db_service
+from src.app.services.ingestion.ingestion_graph_service import IngestionServiceGraph
+from src.app.configuration.dependencies import get_code_classifier, get_graph_db_service
 
 def main(paths):
-    service = IngestionService(get_db(), get_code_classifier(), get_graph_db_service())
+    service = IngestionServiceGraph(get_code_classifier(), get_graph_db_service())
 
     for path_str in paths:
         folder = Path(path_str)

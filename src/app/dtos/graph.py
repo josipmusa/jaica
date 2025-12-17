@@ -5,7 +5,7 @@ from enum import Enum
 class GraphOperation(str, Enum):
     CALLS = "calls"
     CALLED_BY = "called_by"
-    USAGE = "usage"
+    USES = "uses"
     STRUCTURE = "structure"
     DEPENDENCIES = "dependencies"
 
