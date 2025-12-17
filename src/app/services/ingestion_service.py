@@ -9,7 +9,6 @@ from src.app.models.code_classifier.code_classifier import CodeClassifier
 from src.app.services.graph_db_service import GraphDBService
 from src.app.services.llm_service import summarize_code
 
-
 SUPPORTED_CODE_EXTENSIONS = {
     ".py": "Python",
     ".java": "Java",
@@ -38,11 +37,11 @@ def compute_node_hash(code: str) -> str:
 
 class IngestionService:
     def __init__(
-        self,
-        db: VectorDB,
-        code_classifier: CodeClassifier,
-        graph_db_service: GraphDBService,
-        batch_size: int = 16,
+            self,
+            db: VectorDB,
+            code_classifier: CodeClassifier,
+            graph_db_service: GraphDBService,
+            batch_size: int = 16,
     ):
         self.batch_size = batch_size
         self.code_classifier = code_classifier
@@ -53,11 +52,11 @@ class IngestionService:
     # AST EXTRACTION
     # -------------------------
     def _extract_nodes(
-        self,
-        language: str,
-        content: str,
-        file_path: str,
-        max_node_lines: int = 300,
+            self,
+            language: str,
+            content: str,
+            file_path: str,
+            max_node_lines: int = 300,
     ) -> Dict:
         language = language.lower()
         if language not in NODE_TYPES:
@@ -82,7 +81,7 @@ class IngestionService:
         parent_stack: List[str] = []
 
         def extract_code(start: int, end: int) -> str:
-            return "\n".join(lines[start - 1 : end])
+            return "\n".join(lines[start - 1: end])
 
         def get_node_name(node) -> Optional[str]:
             for child in node.children:
@@ -300,7 +299,8 @@ class IngestionService:
                     "language": language,
                     "node_type": node["node_type"],
                     "node_name": node["node_name"],
-                    "symbols_defined": extracted["defined_symbols"].get(node_id, []),
+                    "symbols_defined": ",".join(
+                        extracted["defined_symbols"].get(node_id, [])),
                 }
             )
             batch_ids.append(node_id)
@@ -345,8 +345,8 @@ class IngestionService:
             f
             for f in folder.rglob("*")
             if f.is_file()
-            and f.suffix in SUPPORTED_CODE_EXTENSIONS
-            and not any(p in f.parts for p in IGNORE_CODE_FOLDERS)
+               and f.suffix in SUPPORTED_CODE_EXTENSIONS
+               and not any(p in f.parts for p in IGNORE_CODE_FOLDERS)
         ]
 
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
