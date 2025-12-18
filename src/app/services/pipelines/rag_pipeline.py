@@ -1,8 +1,9 @@
 import textwrap
 
+from src.app.configuration.config import HYBRID_SYSTEM_PROMPT
 from src.app.configuration.db import VectorDB
 from src.app.dtos.chat import PromptRequest
-from src.app.services.llm_service import ask
+from src.app.services.llm_service import general_model_chat
 
 class RagPipeline:
     def __init__(self, db: VectorDB):
@@ -34,16 +35,18 @@ Answer the user's question strictly using the provided context.
 If the answer is not in the context, respond with EXACTLY: "I don't know".
 Do not mention that the code was provided to you; answer like you know the code.
 
-### Context:
+Relevant semantic context (vector retrieval):
 {context_text}
 
-### Question:
+User question:
 {prompt_request.prompt}
 
-### Answer:
+Using the information above, answer the user's question.
+Focus on correctness, clarity, and actionable insights.
+If the answer is not in the context, respond with EXACTLY: "I don't know".
+Do not mention the fact that the code was provided to you; answer like you know the code.
 """
 
         prompt = textwrap.dedent(raw_prompt).strip()
-        print(f"RAG prompt: {prompt}")
 
-        return ask(prompt)
+        return general_model_chat(prompt=prompt, system_prompt=HYBRID_SYSTEM_PROMPT)

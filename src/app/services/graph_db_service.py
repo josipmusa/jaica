@@ -39,7 +39,6 @@ class GraphDBService:
                               FOR (n:CodeNode) ON (n.symbols_defined)
                           """)
 
-
     def upsert_node(
             self,
             node_id: str,
@@ -268,38 +267,35 @@ class GraphDBService:
             max_depth: int = 5,
     ) -> list[dict]:
 
-        if operation == GraphOperation.STRUCTURE:
-            rel = "CONTAINS"
-            direction = ">"
-        elif operation == GraphOperation.CALLS:
-            rel = "CALLS"
-            direction = ">"
-        elif operation == GraphOperation.CALLED_BY:
-            rel = "CALLS"
-            direction = "<"
-        elif operation == GraphOperation.USES:
-            rel = "USES"
-            direction = ">"
-        elif operation == GraphOperation.DEPENDENCIES:
-            rel = "USES|CALLS"
-            direction = ">"
-        else:
+        op_to_types = {
+            GraphOperation.STRUCTURE: ["CONTAINS"],
+            GraphOperation.CALLS: ["CALLS"],
+            GraphOperation.CALLED_BY: ["CALLS"],
+            GraphOperation.USES: ["USES"],
+            GraphOperation.DEPENDENCIES: ["USES", "CALLS"],
+        }
+
+        if operation not in op_to_types:
             raise ValueError(operation)
 
-        arrow = f"-[:{rel}*1..{max_depth}]-"
-        if direction == ">":
-            arrow = f"-[:{rel}*1..{max_depth}]->"
-        elif direction == "<":
-            arrow = f"<-[:{rel}*1..{max_depth}]-"
+        types = op_to_types[operation]
+
+        # Direction
+        if operation == GraphOperation.CALLED_BY:
+            arrow = f"<-[:SEMANTIC_LINK*1..{max_depth}]-"
+        else:
+            arrow = f"-[:SEMANTIC_LINK*1..{max_depth}]->"
 
         query = f"""
-        MATCH (n:CodeNode {{node_id: $node_id}})
-        MATCH (n){arrow}(m)
-        RETURN DISTINCT m
+        MATCH path = (start:CodeNode {{node_id: $node_id}}){arrow}(target)
+        WHERE ALL(rel IN relationships(path) WHERE rel.type IN $types)
+        RETURN DISTINCT target AS n
         """
 
         params = {
-            "node_id": node_id
+            "node_id": node_id,
+            "types": types
         }
 
         return self.graph_db.run_get_list(query, params)
+
