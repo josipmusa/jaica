@@ -7,10 +7,10 @@ from src.app.dtos.graph import GraphQueryPlan
 from src.app.dtos.intent import Intent
 from src.app.configuration.config import MAIN_LLM_MODEL, CLASSIFIER_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT, GRAPH_SYMBOL_EXTRACTION_SYSTEM_PROMPT
 
-def general_model_chat(prompt: str) -> str:
+def general_model_chat(prompt: str, system_prompt: str = DEFAULT_SYSTEM_PROMPT) -> str:
     try :
         answer = chat(model=MAIN_LLM_MODEL, messages=[
-            {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {'role': 'user', 'content': prompt}
         ])
         return answer.message.content

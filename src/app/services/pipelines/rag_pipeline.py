@@ -32,6 +32,7 @@ class RagPipeline:
 You are a local AI coding assistant.
 Answer the user's question strictly using the provided context.
 If the answer is not in the context, respond with EXACTLY: "I don't know".
+Do not mention that the code was provided to you; answer like you know the code.
 
 ### Context:
 {context_text}

@@ -277,7 +277,7 @@ class GraphDBService:
         elif operation == GraphOperation.CALLED_BY:
             rel = "CALLS"
             direction = "<"
-        elif operation == GraphOperation.USAGE:
+        elif operation == GraphOperation.USES:
             rel = "USES"
             direction = ">"
         elif operation == GraphOperation.DEPENDENCIES:
