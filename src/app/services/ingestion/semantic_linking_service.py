@@ -115,6 +115,9 @@ class SemanticLinkingService:
 
                 target = self._select_best_candidate(candidates, ALLOWED_USAGE_KINDS)
 
+                if not target:
+                    continue
+
                 if target["node_id"] == user_id:
                     continue
 
