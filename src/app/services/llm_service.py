@@ -32,7 +32,6 @@ def classify(prompt: str) -> Intent:
     if intent is None:
         intent = Intent.GENERAL
 
-    print(f"Intent is {intent}")
     return intent
 
 

@@ -1,32 +1,42 @@
-from typing import List
+from typing import List, Tuple, Optional
 
-from src.app.dtos.chat import PromptRequest
+from src.app.dtos.chat import ChatRequest, DependencyGraph, DependencyEdge
 from src.app.dtos.graph import GraphQueryPlan
 from src.app.services.graph_db_service import GraphDBService
 from src.app.services.llm_service import extract_graph_query_plan, general_model_chat
 
 
+UI_MAX_EDGES_PER_NODE=5
+
 class GraphReasoningPipeline:
     def __init__(self, graph_db_service: GraphDBService):
         self.graph_db_service = graph_db_service
 
-    def run(self, prompt_request: PromptRequest) -> str:
-        plan = extract_graph_query_plan(prompt_request.prompt)
+    def run(self, chat_request: ChatRequest) -> Tuple[Optional[str], Optional[DependencyGraph]]:
+        plan = extract_graph_query_plan(chat_request.prompt)
 
+        # Not a graph question
         if not plan:
-            return "I couldn't identify a code-related question."
+            return None, None
 
         nodes = self._resolve_nodes(
             symbols=plan.symbols,
-            project_name=prompt_request.project_name,
+            project_name=chat_request.project_name,
         )
 
+        # Graph question, but no symbols resolved
         if not nodes:
-            return "No matching symbols were found in the codebase."
+            return None, None
 
-        contexts = self._traverse(nodes, plan)
+        contexts, dependency_graph = self._traverse(nodes, plan)
 
-        return self._reason(prompt_request.prompt, contexts)
+        # No graph edges worth showing
+        if not dependency_graph or not dependency_graph.edges:
+            return None, None
+
+        answer = self._reason(chat_request.prompt, contexts)
+
+        return answer, dependency_graph
 
     def _resolve_nodes(self, symbols: List[str], project_name: str) -> List[dict]:
         resolved = []
@@ -43,24 +53,59 @@ class GraphReasoningPipeline:
 
         return resolved
 
-    def _traverse(self, nodes: List[dict], plan: GraphQueryPlan) -> List[str]:
-        contexts = []
+    def _traverse(
+            self,
+            nodes: List[dict],
+            plan: GraphQueryPlan,
+    ) -> Tuple[List[str], DependencyGraph]:
+
+        contexts: List[str] = []
+        edges: List[DependencyEdge] = []
+        used_nodes = set()
 
         for node in nodes:
+            source_name = node["node_name"]
+            used_nodes.add(source_name)
+
             related = self.graph_db_service.traverse(
                 node_id=node["node_id"],
                 operation=plan.operation,
-                max_depth=10,
+                max_depth=10,  # deep for reasoning
             )
 
-            context = self._format_context(
-                node=node,
-                related_nodes=related,
-                operation=plan.operation,
-            )
-            contexts.append(context)
+            # Limit graph expansion for UI
+            graph_related = related[:UI_MAX_EDGES_PER_NODE]
 
-        return contexts
+            for rel in graph_related:
+                target_name = rel["node_name"]
+                used_nodes.add(target_name)
+
+                edges.append(
+                    DependencyEdge(
+                        from_=source_name,
+                        to=target_name,
+                    )
+                )
+
+            # Full context still uses all related nodes
+            contexts.append(
+                self._format_context(
+                    node=node,
+                    related_nodes=related,
+                    operation=plan.operation,
+                )
+            )
+
+        # Deduplicate edges
+        edges = list({(e.from_, e.to): e for e in edges}.values())
+
+        graph = DependencyGraph(
+            nodes=sorted(used_nodes),
+            edges=edges,
+            description=f"{plan.operation.value.replace('_', ' ').title()} relationships",
+        )
+
+        return contexts, graph
 
     def _format_context(self, node: dict, related_nodes: List[dict], operation) -> str:
         lines = []
