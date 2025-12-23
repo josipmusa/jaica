@@ -1,5 +1,7 @@
+from typing import List
+
 from src.app.services.detectors import config
-from src.app.dtos.issue import Issue, Severity
+from src.app.dtos.issue import Issue, Severity, IssueType
 
 # Node types that contribute to nesting
 NESTING_NODES = {
@@ -12,7 +14,7 @@ NESTING_NODES = {
     "class_definition",
 }
 
-def detect_deep_nesting(tree, code):
+def detect_deep_nesting(tree, code) -> List[Issue]:
     smells = []
 
     def walk(node, depth=0):
@@ -26,7 +28,7 @@ def detect_deep_nesting(tree, code):
             end_line = node.end_point[0] + 1
             smells.append(Issue(
                 issue_id="PY_DEEP_NESTING",
-                type="DeepNesting",
+                type=IssueType.DEEP_NESTING,
                 message=f"Code nested too deeply (depth={depth}).",
                 severity=Severity.MEDIUM,
                 line_start=start_line,

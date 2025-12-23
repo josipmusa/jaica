@@ -1,8 +1,10 @@
+from typing import List
+
 from src.app.services.detectors import config
-from src.app.dtos.issue import Issue, Severity
+from src.app.dtos.issue import Issue, Severity, IssueType
 
 
-def detect_many_params(tree, code):
+def detect_many_params(tree, code) -> List[Issue]:
     smells = []
 
     def walk(node):
@@ -13,7 +15,7 @@ def detect_many_params(tree, code):
                 if count > config.TOO_MANY_PARAMS:
                     smells.append(Issue(
                         issue_id="JAVA_MANY_PARAMS",
-                        type="ManyParameters",
+                        type=IssueType.MANY_PARAMS,
                         message=f"Function has too many parameters ({count}).",
                         severity=Severity.LOW,
                         line_start=node.start_point[0] + 1

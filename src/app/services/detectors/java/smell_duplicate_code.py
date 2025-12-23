@@ -1,7 +1,10 @@
 from hashlib import md5
-from src.app.dtos.issue import Issue, Severity
+from typing import List
 
-def detect_duplicate_code(code):
+from src.app.dtos.issue import Issue, Severity, IssueType
+
+
+def detect_duplicate_code(code) -> List[Issue]:
     smells = []
     blocks = code.split("\n\n")  # rough heuristic for code blocks
 
@@ -14,7 +17,7 @@ def detect_duplicate_code(code):
             original_line = hashes[digest]
             smells.append(Issue(
                 issue_id="JAVA_DUPLICATE_CODE",
-                type="DuplicateCode",
+                type=IssueType.DUPLICATE_CODE,
                 message=f"Duplicate code block found matching block starting at line {original_line}.",
                 severity=Severity.LOW,
                 line_start=line_start

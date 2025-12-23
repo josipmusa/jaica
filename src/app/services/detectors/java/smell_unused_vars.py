@@ -1,7 +1,9 @@
-from src.app.dtos.issue import Issue, Severity
+from typing import List
+
+from src.app.dtos.issue import Issue, Severity, IssueType
 import re
 
-def detect_unused_vars_and_imports(tree, code):
+def detect_unused_vars_and_imports(tree, code) -> List[Issue]:
     """
     Detect unused imports and unused local variables in Java code.
     """
@@ -33,7 +35,7 @@ def detect_unused_vars_and_imports(tree, code):
         if imp not in used_imports:
             smells.append(Issue(
                 issue_id="JAVA_UNUSED_IMPORT",
-                type="UnusedImport",
+                type=IssueType.UNUSED_IMPORT,
                 message=f"Import '{imp}' is never used",
                 severity=Severity.LOW,
                 line_start=line_no,
@@ -70,7 +72,7 @@ def detect_unused_vars_and_imports(tree, code):
         if var not in used_vars:
             smells.append(Issue(
                 issue_id="JAVA_UNUSED_VAR",
-                type="UnusedVariable",
+                type=IssueType.UNUSED_VARIABLE,
                 message=f"Local variable '{var}' is assigned but never used",
                 severity=Severity.LOW,
                 line_start=line_no

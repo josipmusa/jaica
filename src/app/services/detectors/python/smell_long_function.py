@@ -1,8 +1,10 @@
+from typing import List
+
 from src.app.services.detectors import config
-from src.app.dtos.issue import Issue, Severity
+from src.app.dtos.issue import Issue, Severity, IssueType
 
 
-def detect_long_functions(tree, code):
+def detect_long_functions(tree, code) -> List[Issue]:
     smells = []
 
     def walk(node):
@@ -14,7 +16,7 @@ def detect_long_functions(tree, code):
             if length > config.LONG_METHOD_LINES:
                 smells.append(Issue(
                     issue_id="PY_LONG_FUNCTION",
-                    type="LongFunction",
+                    type=IssueType.LONG_FUNCTION,
                     message=f"Function too long ({length} lines).",
                     severity=Severity.MEDIUM,
                     line_start=start + 1,

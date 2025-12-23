@@ -1,3 +1,6 @@
+from typing import List
+
+from src.app.dtos.issue import Issue
 from src.app.services.detectors.java.smell_long_function import detect_long_functions
 from src.app.services.detectors.java.smell_deep_nesting import detect_deep_nesting
 from src.app.services.detectors.java.smell_many_params import detect_many_params
@@ -5,7 +8,7 @@ from src.app.services.detectors.java.smell_duplicate_code import detect_duplicat
 from src.app.services.detectors.java.smell_unused_vars import detect_unused_vars_and_imports
 from src.app.services.detectors.parsers import load_parser
 
-def analyze_java(code: str):
+def analyze_java(code: str) -> List[Issue]:
     try:
         parser = load_parser("java")
     except Exception as e:

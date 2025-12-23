@@ -120,7 +120,8 @@ class GraphDBService:
         params = {
             "project": project_name
         }
-        return self.graph_db.run_get_list(query, params)
+        results = self.graph_db.run_get_list(query, params)
+        return [dict(r["n"]) for r in results]
 
     def project_exists(self, project_name: str) -> bool:
         query = """
@@ -151,11 +152,8 @@ class GraphDBService:
             "project": project_name,
             "limit": limit
         }
-        return self.graph_db.run_get_list(query, params)
-
-    # -------------------------
-    # Relationships
-    # -------------------------
+        results = self.graph_db.run_get_list(query, params)
+        return [dict(r["n"]) for r in results]
 
     def link(
             self,
@@ -254,7 +252,8 @@ class GraphDBService:
             "limit": limit
         }
 
-        return self.graph_db.run_get_list(query, params)
+        results = self.graph_db.run_get_list(query, params)
+        return [dict(r["n"]) for r in results]
 
     # -------------------------
     # Traversal
@@ -297,5 +296,147 @@ class GraphDBService:
             "types": types
         }
 
-        return self.graph_db.run_get_list(query, params)
+        results =  self.graph_db.run_get_list(query, params)
+        return [dict(r["n"]) for r in results]
+
+    def list_methods(self, class_name: Optional[str], project_name: str) -> list[dict]:
+        """
+        If class_name is provided → return methods/functions inside the class.
+        If class_name is None → return all top-level functions in the project.
+
+        Returns a list of dicts:
+            {
+                "method_name": str,
+                "class_name": Optional[str],
+                "file_path": str
+            }
+        """
+        if class_name:
+            query = """
+            MATCH (c:CodeNode {node_kind: 'class', node_name: $class_name, project: $project})
+            OPTIONAL MATCH (c)-[:CONTAINS]->(m:CodeNode)
+            WHERE m.node_kind IN ['method', 'function']
+            RETURN m.node_name AS method_name, c.node_name AS class_name, m.file_path AS file_path
+            """
+            params = {"project": project_name, "class_name": class_name}
+        else:
+            # top-level functions not contained in a class
+            query = """
+            MATCH (m:CodeNode)
+            WHERE m.project = $project AND m.node_kind = 'function'
+              AND NOT ( (:CodeNode {node_kind: 'class', project: $project})-[:CONTAINS]->(m) )
+            RETURN m.node_name AS method_name, NULL AS class_name, m.file_path AS file_path
+            """
+            params = {"project": project_name}
+
+        results = self.graph_db.run_get_list(query, params)
+        return [r for r in results if r.get("method_name")]
+
+    def find_class_for_method(self, method_name: str, project_name: str) -> Optional[str]:
+        """
+        Returns the class containing the method, or None if it's a module-level function.
+        """
+        query = """
+        MATCH (c:CodeNode {node_kind: 'class', project: $project})-[:CONTAINS]->(m:CodeNode)
+        WHERE m.node_name = $method_name AND m.node_kind IN ['method', 'function']
+        RETURN c.node_name AS class_name
+        LIMIT 1
+        """
+        params = {"project": project_name, "method_name": method_name}
+        result = self.graph_db.run_get_single(query, params)
+        return result["class_name"] if result else None
+
+    def find_method_or_function_node(self, method_name: str, project_name: str) -> Optional[dict]:
+        """
+        Finds a method or module-level function node by name in the given project.
+        Returns a dict with:
+            {
+                "method_name": str,
+                "class_name": Optional[str],
+                "file_path": Optional[str]
+            }
+        Returns None if not found.
+        """
+        query = """
+        MATCH (m:CodeNode)
+        WHERE m.project = $project
+          AND m.node_name = $method_name
+          AND m.node_kind IN ['method', 'function']
+        OPTIONAL MATCH (c:CodeNode {node_kind: 'class', project: $project})-[:CONTAINS]->(m)
+        RETURN m.node_name AS method_name,
+               c.node_name AS class_name,
+               m.file_path AS file_path
+        LIMIT 1
+        """
+        params = {"project": project_name, "method_name": method_name}
+        result = self.graph_db.run_get_single(query, params)
+        return dict(result) if result else None
+
+    def is_method_called_externally(self, class_name: Optional[str], method_name: str) -> bool:
+        """
+        Returns True if the method/function is called from outside its class.
+        """
+        if class_name:
+            class_filter = """
+            MATCH (c:CodeNode {node_kind: 'class', node_name: $class_name})-[:CONTAINS]->(m:CodeNode)
+            """
+            params = {"class_name": class_name, "method_name": method_name}
+            external_filter = "AND NOT (caller)-[:CONTAINS]->(m)"
+        else:
+            class_filter = """
+            MATCH (m:CodeNode {node_kind: 'function', node_name: $method_name})
+            """
+            params = {"method_name": method_name}
+            external_filter = ""
+
+        query = f"""
+        {class_filter}
+        MATCH (caller)-[r:SEMANTIC_LINK]->(m)
+        WHERE m.node_name = $method_name
+          AND r.type = 'CALLS'
+          {external_filter}
+        RETURN COUNT(caller) > 0 AS called_externally
+        """
+
+        result = self.graph_db.run_get_single(query, params)
+        return result["called_externally"] if result else False
+
+    def get_class_collaborator_count(self, class_name: str) -> int:
+        """
+        Returns the number of distinct classes that this class depends on.
+        """
+        query = """
+        MATCH (c:CodeNode {node_kind: 'class', node_name: $class_name})-[:CONTAINS]->(m:CodeNode)
+        MATCH (m)-[r:SEMANTIC_LINK]->(other:CodeNode {node_kind: 'class'})
+        WHERE r.type IN ['USES', 'CALLS']
+        RETURN COUNT(DISTINCT other) AS collaborator_count
+        """
+        params = {"class_name": class_name}
+        result = self.graph_db.run_get_single(query, params)
+        return result["collaborator_count"] if result else 0
+
+    def get_method_dependencies(self, class_name: Optional[str], method_name: str) -> list[str]:
+        """
+        Returns a list of classes or methods that the given method/function depends on.
+        """
+        if class_name:
+            query = """
+            MATCH (c:CodeNode {node_kind: 'class', node_name: $class_name})-[:CONTAINS]->(m:CodeNode)
+            WHERE m.node_name = $method_name AND m.node_kind IN ['method', 'function']
+            MATCH (m)-[r:SEMANTIC_LINK]->(dep:CodeNode)
+            WHERE r.type IN ['USES', 'CALLS']
+            RETURN DISTINCT dep.node_name AS dependency
+            """
+            params = {"class_name": class_name, "method_name": method_name}
+        else:
+            query = """
+            MATCH (m:CodeNode {node_kind: 'function', node_name: $method_name})
+            MATCH (m)-[r:SEMANTIC_LINK]->(dep:CodeNode)
+            WHERE r.type IN ['USES', 'CALLS']
+            RETURN DISTINCT dep.node_name AS dependency
+            """
+            params = {"method_name": method_name}
+
+        results = self.graph_db.run_get_list(query, params)
+        return [r["dependency"] for r in results]
 

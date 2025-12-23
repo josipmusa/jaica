@@ -8,8 +8,16 @@ class Severity(str, Enum):
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
 
+class IssueType(str, Enum):
+    DEEP_NESTING = "deep_nesting"
+    DUPLICATE_CODE = "duplicate_code"
+    LONG_FUNCTION = "long_function"
+    MANY_PARAMS = "many_params"
+    UNUSED_IMPORT = "unused_import"
+    UNUSED_VARIABLE = "unused_variable"
+
 class Issue(BaseModel):
-    type: str
+    type: IssueType
     message: str
     severity: Severity
     line_start: int
@@ -17,5 +25,6 @@ class Issue(BaseModel):
     issue_id: Optional[str] = None
     suggested_fix: Optional[str] = None
     confidence: Optional[float] = None
+
 
 

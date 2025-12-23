@@ -1,8 +1,11 @@
 import re
 from hashlib import md5
-from src.app.dtos.issue import Issue, Severity
+from typing import List
 
-def detect_duplicate_code(code):
+from src.app.dtos.issue import Issue, Severity, IssueType
+
+
+def detect_duplicate_code(code) -> List[Issue]:
     smells = []
     # Find all function blocks
     func_blocks = re.findall(r"(def\s+\w+\(.*?\):[\s\S]+?)(?=\ndef|\Z)", code)
@@ -14,7 +17,7 @@ def detect_duplicate_code(code):
             original_line = hashes[digest]
             smells.append(Issue(
                 issue_id="PY_DUPLICATE_CODE",
-                type="DuplicateCode",
+                type=IssueType.DUPLICATE_CODE,
                 message=f"Duplicate function found matching block starting at line {original_line}.",
                 severity=Severity.LOW,
                 line_start=start_line

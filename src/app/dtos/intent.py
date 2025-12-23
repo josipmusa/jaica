@@ -5,6 +5,7 @@ class Intent(str, Enum):
     CODE_VECTOR_RETRIEVAL = "CODE_VECTOR_RETRIEVAL" #vector RAG code collection
     DOCS_VECTOR_RETRIEVAL = "DOCS_VECTOR_RETRIEVAL" #vector RAG docs collection
     CODE_HYBRID = "CODE_HYBRID" #when both reasoning & raw code needed
+    TEST_ANALYSIS = "TEST_ANALYSIS"  #when test analysis is required
     GENERAL = "GENERAL" #no RAG/graph needed
 
     @classmethod

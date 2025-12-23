@@ -5,9 +5,6 @@ from pydantic import BaseModel, Field, ConfigDict
 from src.app.dtos.intent import Intent
 
 
-class AnalyzeCodeRequest(BaseModel):
-    code_snippet: str
-
 class ChatRequest(BaseModel):
     prompt: str
     project_name: Optional[str] = None

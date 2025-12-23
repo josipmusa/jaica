@@ -5,7 +5,9 @@ from ollama import chat, generate
 
 from src.app.dtos.graph import GraphQueryPlan
 from src.app.dtos.intent import Intent
-from src.app.configuration.config import MAIN_LLM_MODEL, CLASSIFIER_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT, GRAPH_SYMBOL_EXTRACTION_SYSTEM_PROMPT
+from src.app.configuration.config import MAIN_LLM_MODEL, CLASSIFIER_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT, GRAPH_SYMBOL_EXTRACTION_SYSTEM_PROMPT, TEST_ANALYSIS_EXTRACTION_SYSTEM_PROMPT
+from src.app.dtos.test import TestAnalysisExtractedEntities
+
 
 def general_model_chat(prompt: str, system_prompt: str = DEFAULT_SYSTEM_PROMPT) -> str:
     try :
@@ -33,6 +35,32 @@ def classify(prompt: str) -> Intent:
         intent = Intent.GENERAL
 
     return intent
+
+def extract_class_method(prompt: str) -> TestAnalysisExtractedEntities | None:
+    llm_response = chat(
+        model=MAIN_LLM_MODEL,
+        messages=[
+            {"role": "system", "content": TEST_ANALYSIS_EXTRACTION_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt}
+        ]
+    )
+
+    raw = llm_response.message.content.strip()
+    raw = re.sub(r"^```json\s*|\s*```$", "", raw, flags=re.IGNORECASE).strip()
+
+    raw = _extract_json_object(raw)
+    if not raw:
+        return None
+
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+
+    try:
+        return TestAnalysisExtractedEntities.model_validate(data)
+    except Exception:
+        return None
 
 
 def extract_graph_query_plan(prompt: str) -> GraphQueryPlan | None:

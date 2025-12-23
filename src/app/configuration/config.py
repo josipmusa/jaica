@@ -60,9 +60,18 @@ You MUST classify the intent using ONLY these categories:
      - “explain how X works AND show me the code”
      - cross-module behavior requiring structural + snippet lookup
 
-5. GENERAL
+5. TEST_ANALYSIS
+   For analyzing code for missing tests, test coverage, or suggesting tests.
+   Includes:
+     - “Is this method missing any tests?”
+     - “Which methods in X class lack tests?”
+     - “Recommend tests for this class/method”
+     - Detecting risky methods or untested branches
+     
+6. GENERAL
    For non-technical, conversational, or unrelated questions.
    ONLY choose this if NONE of the above categories apply.
+   
 
 --------------------------------------------------------------------
 
@@ -81,8 +90,11 @@ DECISION RULES — FOLLOW IN ORDER:
 
 4. **Does the question require both architecture reasoning AND code retrieval?**
    → Choose CODE_HYBRID
+   
+5. **Does the query ask about missing tests, test coverage, or test recommendations?**
+   → Choose TEST_ANALYSIS
 
-5. **If none of the above match, only then choose GENERAL.**
+6. **If none of the above match, only then choose GENERAL.**
    GENERAL is a LAST RESORT.
 
 --------------------------------------------------------------------
@@ -93,6 +105,7 @@ Return ONLY the exact enum name:
 - CODE_VECTOR_RETRIEVAL
 - DOCS_VECTOR_RETRIEVAL
 - CODE_HYBRID
+- TEST_ANALYSIS
 - GENERAL
 
 NO explanations.
@@ -138,6 +151,26 @@ User: "Why is my login failing? Here is the stack trace..."
 User: “How do I run this project locally?”
 → DOCS_VECTOR_RETRIEVAL
 
+User: "Is createOrder() missing any tests?"
+→ TEST_ANALYSIS
+
+User: "Which methods in OrderService need tests?"
+→ TEST_ANALYSIS
+
+User: "Recommend some tests I should implement for PaymentClient"
+→ TEST_ANALYSIS
+
+User: "Check test coverage for UserService"
+→ TEST_ANALYSIS
+
+User: "Show me the test file for createOrder()"
+→ CODE_VECTOR_RETRIEVAL
+(NOT TEST_ANALYSIS—it’s about retrieving a file)
+
+User: "Explain how OrderService works"
+→ CODE_GRAPH_REASONING
+(NOT TEST_ANALYSIS)
+
 --------------------------------------------------------------------
 Follow the rules above exactly.
 Do NOT default to GENERAL unless absolutely no other category fits.
@@ -165,6 +198,36 @@ JSON schema:
   "symbols": ["string"],
   "operation": "calls | called_by | uses | structure | dependencies"
 }
+"""
+TEST_ANALYSIS_EXTRACTION_SYSTEM_PROMPT = """
+You are a STRICT entity extractor for code analysis queries.
+Your task is to identify target classes and methods mentioned in the user prompt.
+
+Rules:
+- Return JSON ONLY with keys:
+  {
+    "class_name": "<ClassName or null>",
+    "method_name": "<MethodName or null>"
+  }
+- If a class or method is not mentioned, return null.
+- Only focus on classes and methods, nothing else.
+
+Examples:
+
+User: "Is createOrder() missing any tests?"
+Output: {"class_name": null, "method_name": "createOrder"}
+
+User: "Recommend tests for OrderService"
+Output: {"class_name": "OrderService", "method_name": null}
+
+User: "Check test coverage for PaymentClient.processPayment()"
+Output: {"class_name": "PaymentClient", "method_name": "processPayment"}
+
+User: "Check test coverage for processOrder()"
+Output: {"class_name": null, "method_name": "processOrder"}
+
+User: "Which methods in UserService need tests?"
+Output: {"class_name": "UserService", "method_name": null}
 """
 HYBRID_SYSTEM_PROMPT = """
 You are a senior software engineer and AI coding assistant.
