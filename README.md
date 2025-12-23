@@ -1,6 +1,6 @@
-# JAICA - AI-Powered Codebase Analysis & Chat Assistant
+# JAICA - Just An Intelligent Code Assistant or Jopa AI Coding Assistant
 
-JAICA (Just An Intelligent Code Assistant) is an advanced codebase analysis tool that combines **vector-based semantic search**, **graph-based structural reasoning**, and **LLM capabilities** to provide intelligent answers about your code. It ingests codebases into vector and graph databases, enabling both semantic retrieval and structural analysis for comprehensive code understanding.
+JAICA is an AI-powered codebase analysis and chat assistant that combines **vector-based semantic search**, **graph-based structural reasoning**, and **LLM capabilities** to provide intelligent answers about your code. It ingests codebases into vector and graph databases, enabling both semantic retrieval and structural analysis for comprehensive code understanding.
 
 ## 🌟 Key Features
 
