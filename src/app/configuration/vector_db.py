@@ -2,14 +2,9 @@ import chromadb
 from chromadb.config import Settings
 from chromadb.api.types import EmbeddingFunction
 from chromadb.api.models.Collection import Collection
-from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
 import torch
-
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
-VECTORSTORE_PATH = PROJECT_ROOT / "vectorstore"
-
 
 class STEmbeddingFunction(EmbeddingFunction):
     def __init__(self, model):
@@ -43,7 +38,7 @@ class STEmbeddingFunction(EmbeddingFunction):
 class VectorDB:
     _instance = None
 
-    def __new__(cls, persist_dir: str = "./vectorstore"):
+    def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
 

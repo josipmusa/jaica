@@ -10,10 +10,10 @@ from src.app.services.pipelines.pipeline_router import PipelineRouter
 from src.app.services.pipelines.rag_pipeline import RagPipeline
 
 code_classifier_instance = CodeClassifier(config.CODE_CLASSIFIER_MODEL_URL, config.CODE_CLASSIFIER_LABEL_URL)
-db_instance = VectorDB(persist_dir=str(config.VECTORSTORE_PATH))
+vector_db_instance = VectorDB()
 graph_db_instance = GraphDB()
 graph_db_service_instance = GraphDBService(graph_db=graph_db_instance)
-rag_pipeline_instance = RagPipeline(db=db_instance)
+rag_pipeline_instance = RagPipeline(db=vector_db_instance)
 graph_reasoning_pipeline_instance = GraphReasoningPipeline(graph_db_service=graph_db_service_instance)
 hybrid_pipeline_instance = HybridPipeline(rag_pipeline=rag_pipeline_instance, graph_pipeline=graph_reasoning_pipeline_instance)
 code_analysis_service_instance = CodeAnalysisService(code_classifier=code_classifier_instance)
@@ -23,8 +23,8 @@ pipeline_router_instance = PipelineRouter(rag_pipeline=rag_pipeline_instance, gr
 def get_code_classifier() -> CodeClassifier:
     return code_classifier_instance
 
-def get_db() -> VectorDB:
-    return db_instance
+def get_vector_db() -> VectorDB:
+    return vector_db_instance
 
 def get_pipeline_router() -> PipelineRouter:
     return pipeline_router_instance
