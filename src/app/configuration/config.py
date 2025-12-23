@@ -1,9 +1,5 @@
-from pathlib import Path
-
 CODE_CLASSIFIER_MODEL_URL = "https://huggingface.co/josipmusa/code-classifier/resolve/main/code_classifier.onnx"
 CODE_CLASSIFIER_LABEL_URL = "https://huggingface.co/josipmusa/code-classifier/resolve/main/labels.json"
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
-VECTORSTORE_PATH = PROJECT_ROOT / "vectorstore"
 MAIN_LLM_MODEL = 'qwen2.5:3b-instruct'
 DEFAULT_SYSTEM_PROMPT = """
 You are a helpful and concise AI assistant. 

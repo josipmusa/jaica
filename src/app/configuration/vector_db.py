@@ -1,10 +1,15 @@
 import chromadb
+import os
 from chromadb.config import Settings
 from chromadb.api.types import EmbeddingFunction
 from chromadb.api.models.Collection import Collection
+from dotenv import load_dotenv
 
 from sentence_transformers import SentenceTransformer
 import torch
+
+load_dotenv()
+
 
 class STEmbeddingFunction(EmbeddingFunction):
     def __init__(self, model):
@@ -41,11 +46,12 @@ class VectorDB:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-
+            host = os.getenv("CHROMA_HOST", "localhost")
+            port = int(os.getenv("CHROMA_PORT", "8001"))
             # Init Chroma
             cls._instance.client = chromadb.HttpClient(
-                host="localhost",
-                port=8001,
+                host=host,
+                port=port,
                 settings=Settings(anonymized_telemetry=False)
             )
 
