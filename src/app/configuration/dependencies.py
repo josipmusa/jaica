@@ -1,5 +1,5 @@
 from src.app.configuration import config
-from src.app.configuration.db import VectorDB
+from src.app.configuration.vector_db import VectorDB
 from src.app.configuration.graph_db import GraphDB
 from src.app.models.code_classifier.code_classifier import CodeClassifier
 from src.app.services.code_analysis_service import CodeAnalysisService

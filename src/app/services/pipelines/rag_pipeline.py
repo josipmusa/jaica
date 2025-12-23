@@ -2,7 +2,7 @@ import textwrap
 from typing import Tuple, List
 
 from src.app.configuration.config import HYBRID_SYSTEM_PROMPT
-from src.app.configuration.db import VectorDB
+from src.app.configuration.vector_db import VectorDB
 from src.app.dtos.chat import ChatRequest, RetrievedFile
 from src.app.services.llm_service import general_model_chat
 

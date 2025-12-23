@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 
-from src.app.configuration.db import VectorDB
+from src.app.configuration.vector_db import VectorDB
 from src.app.services.detectors.parsers import load_parser
 from src.app.models.code_classifier.code_classifier import CodeClassifier
 from src.app.services.graph_db_service import GraphDBService

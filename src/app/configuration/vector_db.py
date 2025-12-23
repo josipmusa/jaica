@@ -48,12 +48,10 @@ class VectorDB:
             cls._instance = super().__new__(cls)
 
             # Init Chroma
-            cls._instance.client = chromadb.Client(
-                Settings(
-                    anonymized_telemetry=False,
-                    persist_directory=persist_dir,
-                    is_persistent=True
-                )
+            cls._instance.client = chromadb.HttpClient(
+                host="localhost",
+                port=8001,
+                settings=Settings(anonymized_telemetry=False)
             )
 
             # Load embedding model on GPU
