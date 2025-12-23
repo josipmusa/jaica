@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Convenience script to run the JAICA CLI
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
+python -m src.app.cli "$@"
+
