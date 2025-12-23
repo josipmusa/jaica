@@ -11,6 +11,7 @@ class PipelineRouter:
         self.graph_reasoning_pipeline = graph_reasoning_pipeline
         self.hybrid_pipeline = hybrid_pipeline
 
+    #TODO add test analysis pipeline here
     def route_prompt(self, chat_request: ChatRequest) -> ChatResponse:
         intent = classify(chat_request.prompt)
 
