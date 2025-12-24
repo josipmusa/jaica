@@ -15,26 +15,26 @@ def query_endpoint(chat_request: ChatRequest, pipeline_router: PipelineRouter = 
 @router.post('/chat/stream')
 async def stream_chat_endpoint(chat_request: ChatRequest, pipeline_router: PipelineRouter = Depends(get_pipeline_router)):
     """
-    Streaming endpoint that returns Server-Sent Events (SSE) for real-time LLM responses.
+    Streaming endpoint that returns newline-delimited JSON (NDJSON) for real-time LLM responses.
+    Each line is a separate JSON object with either 'chunk', 'done', or 'error' field.
     """
-    async def event_generator():
+    async def stream_generator():
         try:
             # Stream the response
             for chunk in pipeline_router.route_prompt_stream(chat_request):
-                # Format as SSE: data: {json}\n\n
-                yield f"data: {json.dumps({'chunk': chunk})}\n\n"
+                # Format as NDJSON: one JSON object per line
+                yield json.dumps({'chunk': chunk}) + '\n'
 
             # Send end signal
-            yield f"data: {json.dumps({'done': True})}\n\n"
+            yield json.dumps({'done': True}) + '\n'
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            yield json.dumps({'error': str(e)}) + '\n'
 
     return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
+        stream_generator(),
+        media_type="application/x-ndjson",
         headers={
             "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
             "X-Accel-Buffering": "no"  # Disable nginx buffering
         }
     )
