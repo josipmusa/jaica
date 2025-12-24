@@ -14,8 +14,8 @@ class TestAnalysisExtractedEntities(BaseModel):
     method_name: Optional[str] = None
 
 class TestGapFinding(BaseModel):
-    class_name: str
-    method_name: Optional[str]
+    class_name: Optional[str] = None
+    method_name: str
     reasons: List[str]
     priority: int  # heuristic score
     suggested_focus: Optional[str] = None

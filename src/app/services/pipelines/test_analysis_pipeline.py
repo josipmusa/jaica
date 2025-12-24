@@ -5,7 +5,7 @@ from src.app.dtos.test import TestGapFinding
 from src.app.services.code_analysis_service import CodeAnalysisService
 from src.app.services.file_metadata_service import is_file_recently_modified
 from src.app.services.graph_db_service import GraphDBService
-from src.app.services.llm_service import extract_class_method
+from src.app.services.llm_service import extract_class_method, analyze_test_gaps
 
 
 class TestAnalysisPipeline:
@@ -13,8 +13,11 @@ class TestAnalysisPipeline:
         self.graph_db_service = graph_db_service
         self.code_analysis_service = code_analysis_service
 
-    #TODO add LLM reasoning with the current response from this method and return that reasoning as the result of the pipeline
-    def run(self, chat_request: ChatRequest) -> List[TestGapFinding]:
+    def run(self, chat_request: ChatRequest) -> str:
+        test_gap_findings = self._find_test_gaps(chat_request)
+        return analyze_test_gaps(test_gap_findings, chat_request.prompt)
+
+    def _find_test_gaps(self, chat_request: ChatRequest) -> List[TestGapFinding]:
         if chat_request.project_name is None:
             print(f"Project name is required for test analysis pipeline")
 

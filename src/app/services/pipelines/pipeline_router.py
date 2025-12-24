@@ -1,19 +1,22 @@
 from src.app.dtos.chat import ChatRequest, ChatResponse
 from src.app.dtos.intent import Intent
-from src.app.services.llm_service import classify, general_model_chat
+from src.app.services.llm_service import classify_intent, general_model_chat
 from src.app.services.pipelines.graph_pipeline import GraphReasoningPipeline
 from src.app.services.pipelines.hybrid_pipeline import HybridPipeline
 from src.app.services.pipelines.rag_pipeline import RagPipeline
+from src.app.services.pipelines.test_analysis_pipeline import TestAnalysisPipeline
+
 
 class PipelineRouter:
-    def __init__(self, rag_pipeline: RagPipeline, graph_reasoning_pipeline: GraphReasoningPipeline, hybrid_pipeline: HybridPipeline):
+    def __init__(self, rag_pipeline: RagPipeline, graph_reasoning_pipeline: GraphReasoningPipeline,
+                 hybrid_pipeline: HybridPipeline, test_analysis_pipeline: TestAnalysisPipeline):
         self.rag_pipeline = rag_pipeline
         self.graph_reasoning_pipeline = graph_reasoning_pipeline
         self.hybrid_pipeline = hybrid_pipeline
+        self.test_analysis_pipeline = test_analysis_pipeline
 
-    #TODO add test analysis pipeline here
     def route_prompt(self, chat_request: ChatRequest) -> ChatResponse:
-        intent = classify(chat_request.prompt)
+        intent = classify_intent(chat_request.prompt)
 
         if intent is Intent.CODE_GRAPH_REASONING:
             answer, dependency_graph = self.graph_reasoning_pipeline.run(chat_request)
@@ -27,6 +30,9 @@ class PipelineRouter:
         elif intent is Intent.CODE_HYBRID:
             answer, retrieved_files, dependency_graph = self.hybrid_pipeline.run(chat_request)
             return ChatResponse(answer=answer, intent=intent, retrieved_files=retrieved_files, dependency_graph=dependency_graph)
+        elif intent is Intent.TEST_ANALYSIS:
+            answer = self.test_analysis_pipeline.run(chat_request)
+            return ChatResponse(answer=answer, intent=intent)
         else:
             answer = general_model_chat(chat_request.prompt)
             return ChatResponse(answer=answer, intent=intent)
