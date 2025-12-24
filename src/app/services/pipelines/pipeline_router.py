@@ -1,6 +1,6 @@
 from src.app.dtos.chat import ChatRequest, ChatResponse
 from src.app.dtos.intent import Intent
-from src.app.services.llm_service import classify_intent, general_model_chat
+from src.app.services.llm_service import classify_intent, general_model_chat, general_model_chat_stream
 from src.app.services.pipelines.graph_pipeline import GraphReasoningPipeline
 from src.app.services.pipelines.hybrid_pipeline import HybridPipeline
 from src.app.services.pipelines.rag_pipeline import RagPipeline
@@ -36,3 +36,38 @@ class PipelineRouter:
         else:
             answer = general_model_chat(chat_request.prompt)
             return ChatResponse(answer=answer, intent=intent)
+
+    def route_prompt_stream(self, chat_request: ChatRequest):
+        """
+        Streaming version of route_prompt. Yields text chunks as they arrive.
+        For complex intents (graph, RAG, etc), streams the final answer generation.
+        """
+        intent = classify_intent(chat_request.prompt)
+
+        if intent is Intent.CODE_GRAPH_REASONING:
+            answer, dependency_graph = self.graph_reasoning_pipeline.run(chat_request)
+            if answer is None:
+                yield "Sorry, I can't answer that question"
+            else:
+                # Stream the pre-generated answer word by word for consistency
+                for word in answer.split():
+                    yield word + " "
+        elif intent in {Intent.CODE_VECTOR_RETRIEVAL, Intent.DOCS_VECTOR_RETRIEVAL}:
+            answer, retrieved_files = self.rag_pipeline.run(chat_request)
+            # Stream the pre-generated answer word by word
+            for word in answer.split():
+                yield word + " "
+        elif intent is Intent.CODE_HYBRID:
+            answer, retrieved_files, dependency_graph = self.hybrid_pipeline.run(chat_request)
+            # Stream the pre-generated answer word by word
+            for word in answer.split():
+                yield word + " "
+        elif intent is Intent.TEST_ANALYSIS:
+            answer = self.test_analysis_pipeline.run(chat_request)
+            # Stream the pre-generated answer word by word
+            for word in answer.split():
+                yield word + " "
+        else:
+            # For general chat, use true streaming from the LLM
+            for chunk in general_model_chat_stream(chat_request.prompt):
+                yield chunk

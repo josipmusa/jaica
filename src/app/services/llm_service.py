@@ -16,10 +16,29 @@ def general_model_chat(prompt: str, system_prompt: str = DEFAULT_SYSTEM_PROMPT) 
         answer = chat(model=MAIN_LLM_MODEL, messages=[
             {"role": "system", "content": system_prompt},
             {'role': 'user', 'content': prompt}
-        ])
+        ]        )
         return answer.message.content
     except Exception:
         return "Error generating answer, try again later"
+
+def general_model_chat_stream(prompt: str, system_prompt: str = DEFAULT_SYSTEM_PROMPT):
+    """
+    Streaming version of general_model_chat. Yields chunks of text as they arrive.
+    """
+    try:
+        stream = chat(
+            model=MAIN_LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {'role': 'user', 'content': prompt}
+            ],
+            stream=True
+        )
+        for chunk in stream:
+            if hasattr(chunk, 'message') and hasattr(chunk.message, 'content'):
+                yield chunk.message.content
+    except Exception as e:
+        yield f"Error generating answer: {str(e)}"
 
 def classify_intent(prompt: str) -> Intent:
     llm_response = chat(model=MAIN_LLM_MODEL, messages=[
