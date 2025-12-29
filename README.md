@@ -276,11 +276,11 @@ The API will be available at `http://localhost:8000`.
 
 ### API Endpoints
 
-#### 1. Chat Endpoint
+#### 1. Chat Streaming Endpoint
 
-**POST** `/api/chat`
+**POST** `/api/chat/stream`
 
-Send a query about your codebase and get intelligent responses.
+Send a query about your codebase and receive streaming responses in real-time using NDJSON (Newline Delimited JSON) format.
 
 **Request Body:**
 ```json
@@ -290,21 +290,26 @@ Send a query about your codebase and get intelligent responses.
 }
 ```
 
-**Response:**
+**Response Format:**
+
+The response is streamed as NDJSON with `Content-Type: application/x-ndjson`. Each line is a separate JSON object.
+
+**First chunk - Metadata:**
 ```json
-{
-  "answer": "The authenticate function is called by the following methods: ...",
-  "intent": "CODE_GRAPH_REASONING",
-  "dependency_graph": {
-    "nodes": ["authenticate", "login", "verify_token"],
-    "edges": [
-      {"from": "login", "to": "authenticate"},
-      {"from": "verify_token", "to": "authenticate"}
-    ]
-  },
-  "retrieved_files": null
-}
+{"type": "metadata", "intent": "CODE_GRAPH_REASONING", "retrievedFiles": null, "dependencyGraph": {"nodes": ["authenticate", "login", "verify_token"], "edges": [{"from": "login", "to": "authenticate"}, {"from": "verify_token", "to": "authenticate"}], "description": "Call chain analysis"}}
 ```
+
+**Subsequent chunks - Content:**
+```json
+{"type": "content", "content": "The authenticate "}
+{"type": "content", "content": "function is called "}
+{"type": "content", "content": "by the following methods: ..."}
+```
+
+**Benefits of Streaming:**
+- Real-time response delivery as the LLM generates text
+- Better user experience with immediate feedback
+- Reduced perceived latency for long responses
 
 #### 2. Status Endpoint
 
@@ -335,21 +340,30 @@ Each service field (`vector_db`, `graph_db`, `llm`) can be:
 ### Query Examples
 
 ```bash
-# Semantic code search
-curl -X POST http://localhost:8000/api/chat \
+# Semantic code search with streaming
+curl -X POST http://localhost:8000/api/chat/stream \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Find the implementation of user authentication", "project_name": "my-app"}'
 
-# Graph-based reasoning
-curl -X POST http://localhost:8000/api/chat \
+# Graph-based reasoning with streaming
+curl -X POST http://localhost:8000/api/chat/stream \
   -H "Content-Type: application/json" \
   -d '{"prompt": "What calls the process_payment method?", "project_name": "my-app"}'
 
-# Test analysis
-curl -X POST http://localhost:8000/api/chat \
+# Test analysis with streaming
+curl -X POST http://localhost:8000/api/chat/stream \
   -H "Content-Type: application/json" \
   -d '{"prompt": "Which methods in UserService are missing tests?", "project_name": "my-app"}'
+
+# Using curl with --no-buffer to see streaming in real-time
+curl --no-buffer -X POST http://localhost:8000/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Explain the authentication flow", "project_name": "my-app"}'
 ```
+
+**Note:** The streaming endpoint returns NDJSON (Newline Delimited JSON). Each line contains either:
+- A metadata chunk with `type: "metadata"` containing the intent, retrieved files, and dependency graph
+- A content chunk with `type: "content"` containing a portion of the generated response
 
 ## 📁 Project Structure
 
