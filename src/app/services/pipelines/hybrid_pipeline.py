@@ -1,11 +1,11 @@
 import json
 
-from src.app.dtos.chat import ChatRequest, RetrievedFile, DependencyGraph, MetadataChunk, ContentChunk
+from src.app.configuration.config import HYBRID_SYSTEM_PROMPT
+from src.app.dtos.chat import ChatRequest, MetadataChunk, ContentChunk
 from src.app.dtos.intent import Intent
+from src.app.services.llm_service import general_model_chat_stream
 from src.app.services.pipelines.graph_pipeline import GraphReasoningPipeline
 from src.app.services.pipelines.rag_pipeline import RagPipeline
-from src.app.services.llm_service import general_model_chat, general_model_chat_stream
-from src.app.configuration.config import HYBRID_SYSTEM_PROMPT
 
 
 class HybridPipeline:
