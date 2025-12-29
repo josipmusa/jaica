@@ -3,12 +3,11 @@ import re
 
 from ollama import chat, generate
 
+from src.app.configuration.config import (MAIN_LLM_MODEL, INTENT_CLASSIFIER_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT,
+                                          GRAPH_SYMBOL_EXTRACTION_SYSTEM_PROMPT, TEST_ANALYSIS_EXTRACTION_SYSTEM_PROMPT)
 from src.app.dtos.graph import GraphQueryPlan
 from src.app.dtos.intent import Intent
-from src.app.configuration.config import (MAIN_LLM_MODEL, INTENT_CLASSIFIER_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT,
-                                          GRAPH_SYMBOL_EXTRACTION_SYSTEM_PROMPT, TEST_ANALYSIS_EXTRACTION_SYSTEM_PROMPT,
-                                          TEST_ANALYSIS_SYSTEM_PROMPT)
-from src.app.dtos.test import TestAnalysisExtractedEntities, TestGapFinding
+from src.app.dtos.test import TestAnalysisExtractedEntities
 
 
 def general_model_chat(prompt: str, system_prompt: str = DEFAULT_SYSTEM_PROMPT) -> str:
@@ -126,31 +125,9 @@ Summary:"""
         print(f"Error summarizing code: {e}")
         return "Unable to summarize"
 
-def analyze_test_gaps(findings: list[TestGapFinding], prompt: str) -> str:
-    formatted_findings = _format_test_findings(findings)
-    modified_prompt = f"""
-User question:
-{prompt}
-
-Identified test gaps:
-{formatted_findings}
-"""
-    return general_model_chat(prompt=modified_prompt, system_prompt=TEST_ANALYSIS_SYSTEM_PROMPT)
-
 def _extract_json_object(raw: str) -> str | None:
     start = raw.find("{")
     end = raw.rfind("}")
     if start == -1 or end == -1 or end < start:
         return None
     return raw[start:end + 1]
-
-def _format_test_findings(findings: list[TestGapFinding]) -> str:
-    lines = []
-    for f in findings:
-        lines.append(
-            f"""- Method: {f.method_name} (Class: {f.class_name or "module-level"})
-      Reasons:
-      - {chr(10).join(f.reasons)}
-      Suggested focus: {f.suggested_focus or "N/A"}"""
-        )
-    return "\n".join(lines)

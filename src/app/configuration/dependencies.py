@@ -8,6 +8,7 @@ from src.app.services.pipelines.graph_pipeline import GraphReasoningPipeline
 from src.app.services.pipelines.hybrid_pipeline import HybridPipeline
 from src.app.services.pipelines.pipeline_router import PipelineRouter
 from src.app.services.pipelines.rag_pipeline import RagPipeline
+from src.app.services.pipelines.test_analysis_pipeline import TestAnalysisPipeline
 
 code_classifier_instance = CodeClassifier(config.CODE_CLASSIFIER_MODEL_URL, config.CODE_CLASSIFIER_LABEL_URL)
 vector_db_instance = VectorDB()
@@ -17,7 +18,9 @@ rag_pipeline_instance = RagPipeline(db=vector_db_instance)
 graph_reasoning_pipeline_instance = GraphReasoningPipeline(graph_db_service=graph_db_service_instance)
 hybrid_pipeline_instance = HybridPipeline(rag_pipeline=rag_pipeline_instance, graph_pipeline=graph_reasoning_pipeline_instance)
 code_analysis_service_instance = CodeAnalysisService(code_classifier=code_classifier_instance)
-pipeline_router_instance = PipelineRouter(rag_pipeline=rag_pipeline_instance, graph_reasoning_pipeline=graph_reasoning_pipeline_instance, hybrid_pipeline=hybrid_pipeline_instance)
+test_analysis_pipeline_instance = TestAnalysisPipeline(graph_db_service=graph_db_service_instance, code_analysis_service=code_analysis_service_instance)
+pipeline_router_instance = PipelineRouter(rag_pipeline=rag_pipeline_instance, graph_reasoning_pipeline=graph_reasoning_pipeline_instance,
+                                          hybrid_pipeline=hybrid_pipeline_instance, test_analysis_pipeline=test_analysis_pipeline_instance)
 
 
 def get_code_classifier() -> CodeClassifier:

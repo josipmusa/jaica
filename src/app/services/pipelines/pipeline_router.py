@@ -1,4 +1,6 @@
-from src.app.dtos.chat import ChatRequest, ChatResponse
+import json
+
+from src.app.dtos.chat import ChatRequest, ChatResponse, ContentChunk
 from src.app.dtos.intent import Intent
 from src.app.services.llm_service import classify_intent, general_model_chat, general_model_chat_stream
 from src.app.services.pipelines.graph_pipeline import GraphReasoningPipeline
@@ -29,7 +31,8 @@ class PipelineRouter:
             return ChatResponse(answer=answer, intent=intent, retrieved_files=retrieved_files)
         elif intent is Intent.CODE_HYBRID:
             answer, retrieved_files, dependency_graph = self.hybrid_pipeline.run(chat_request)
-            return ChatResponse(answer=answer, intent=intent, retrieved_files=retrieved_files, dependency_graph=dependency_graph)
+            return ChatResponse(answer=answer, intent=intent, retrieved_files=retrieved_files,
+                                dependency_graph=dependency_graph)
         elif intent is Intent.TEST_ANALYSIS:
             answer = self.test_analysis_pipeline.run(chat_request)
             return ChatResponse(answer=answer, intent=intent)
@@ -45,29 +48,15 @@ class PipelineRouter:
         intent = classify_intent(chat_request.prompt)
 
         if intent is Intent.CODE_GRAPH_REASONING:
-            answer, dependency_graph = self.graph_reasoning_pipeline.run(chat_request)
-            if answer is None:
-                yield "Sorry, I can't answer that question"
-            else:
-                # Stream the pre-generated answer word by word for consistency
-                for word in answer.split():
-                    yield word + " "
+            yield from self.graph_reasoning_pipeline.run_stream(chat_request)
         elif intent in {Intent.CODE_VECTOR_RETRIEVAL, Intent.DOCS_VECTOR_RETRIEVAL}:
-            answer, retrieved_files = self.rag_pipeline.run(chat_request)
-            # Stream the pre-generated answer word by word
-            for word in answer.split():
-                yield word + " "
+            yield from self.rag_pipeline.run_stream(chat_request, intent)
         elif intent is Intent.CODE_HYBRID:
-            answer, retrieved_files, dependency_graph = self.hybrid_pipeline.run(chat_request)
-            # Stream the pre-generated answer word by word
-            for word in answer.split():
-                yield word + " "
+            yield from self.hybrid_pipeline.run_stream(chat_request)
         elif intent is Intent.TEST_ANALYSIS:
-            answer = self.test_analysis_pipeline.run(chat_request)
-            # Stream the pre-generated answer word by word
-            for word in answer.split():
-                yield word + " "
+            yield from self.test_analysis_pipeline.run_stream(chat_request)
         else:
             # For general chat, use true streaming from the LLM
             for chunk in general_model_chat_stream(chat_request.prompt):
-                yield chunk
+                content_chunk = ContentChunk(content=chunk)
+                yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
