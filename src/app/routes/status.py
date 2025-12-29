@@ -65,3 +65,28 @@ def status_endpoint(
         status_response["status"] = "ok"
 
     return status_response
+
+
+@router.get("/projects")
+def list_projects_endpoint(
+    graph_db_service: GraphDBService = Depends(get_graph_db_service)
+):
+    """
+    List all projects in the graph database.
+
+    Returns:
+        dict: A dictionary containing a list of projects with their metadata
+    """
+    try:
+        projects = graph_db_service.list_projects()
+        return {
+            "projects": projects,
+            "count": len(projects)
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "projects": [],
+            "count": 0
+        }
+

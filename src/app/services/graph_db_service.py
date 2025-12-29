@@ -131,6 +131,23 @@ class GraphDBService:
         result = self.graph_db.run_get_single(query, {"name": project_name})
         return result["exists"]
 
+    def list_projects(self) -> List[dict]:
+        """
+        Returns a list of all projects in the graph database.
+        Each project dict contains:
+            - name: project name
+            - node_count: number of code nodes in the project
+        """
+        query = """
+        MATCH (p:Project)
+        OPTIONAL MATCH (n:CodeNode {project: p.name})
+        WITH p.name AS name, COUNT(n) AS node_count
+        RETURN name, node_count
+        ORDER BY name
+        """
+        results = self.graph_db.run_get_list(query, {})
+        return [{"name": r["name"], "node_count": r["node_count"]} for r in results]
+
     def resolve_symbol(
             self,
             symbol: str,
