@@ -16,12 +16,7 @@ class TestAnalysisPipeline:
         self.graph_db_service = graph_db_service
         self.code_analysis_service = code_analysis_service
 
-    def run(self, chat_request: ChatRequest) -> str:
-        test_gap_findings = self._find_test_gaps(chat_request)
-        test_analysis_prompt = self._get_test_analysis_prompt(test_gap_findings, chat_request.prompt)
-        return general_model_chat(prompt=test_analysis_prompt, system_prompt=TEST_ANALYSIS_SYSTEM_PROMPT)
-
-    def run_stream(self, chat_request: ChatRequest):
+    def run(self, chat_request: ChatRequest):
         test_gap_findings = self._find_test_gaps(chat_request)
         metadata_chunk = MetadataChunk(
             intent=Intent.TEST_ANALYSIS

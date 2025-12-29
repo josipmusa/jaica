@@ -13,7 +13,46 @@ class GraphReasoningPipeline:
     def __init__(self, graph_db_service: GraphDBService):
         self.graph_db_service = graph_db_service
 
-    def run(self, chat_request: ChatRequest) -> Tuple[Optional[str], Optional[DependencyGraph]]:
+    def run(self, chat_request: ChatRequest):
+        plan = extract_graph_query_plan(chat_request.prompt)
+
+        # Not a graph question
+        if not plan:
+            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+            return
+
+        nodes = self._resolve_nodes(
+            symbols=plan.symbols,
+            project_name=chat_request.project_name,
+        )
+
+        # Graph question, but no symbols resolved
+        if not nodes:
+            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+            return
+
+        contexts, dependency_graph = self._traverse(nodes, plan)
+
+        # No graph edges worth showing
+        if not dependency_graph or not dependency_graph.edges:
+            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+            return
+
+        metadata_chunk = MetadataChunk(
+            intent=Intent.CODE_GRAPH_REASONING,
+            dependencyGraph=dependency_graph
+        )
+        yield json.dumps(metadata_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+
+        graph_prompt = self._get_graph_prompt(chat_request.prompt, contexts)
+        for chunk in general_model_chat_stream(graph_prompt):
+            content_chunk = ContentChunk(content=chunk)
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+
+    def run_for_hybrid(self, chat_request: ChatRequest) -> Tuple[Optional[str], Optional[DependencyGraph]]:
         plan = extract_graph_query_plan(chat_request.prompt)
 
         # Not a graph question
@@ -40,56 +79,15 @@ class GraphReasoningPipeline:
 
         return answer, dependency_graph
 
-    def run_stream(self, chat_request: ChatRequest):
-        plan = extract_graph_query_plan(chat_request.prompt)
-
-        # Not a graph question
-        if not plan:
-            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
-            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False))
-            return
-
-        nodes = self._resolve_nodes(
-            symbols=plan.symbols,
-            project_name=chat_request.project_name,
-        )
-
-        # Graph question, but no symbols resolved
-        if not nodes:
-            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
-            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False))
-            return
-
-        contexts, dependency_graph = self._traverse(nodes, plan)
-
-        # No graph edges worth showing
-        if not dependency_graph or not dependency_graph.edges:
-            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
-            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False))
-            return
-
-        metadata_chunk = MetadataChunk(
-            intent=Intent.CODE_GRAPH_REASONING,
-            dependencyGraph=dependency_graph
-        )
-        yield json.dumps(metadata_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
-
-        graph_prompt = self._get_graph_prompt(chat_request.prompt, contexts)
-        for chunk in general_model_chat_stream(graph_prompt):
-            content_chunk = ContentChunk(content=chunk)
-            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
-
     def _resolve_nodes(self, symbols: List[str], project_name: str) -> List[dict]:
         resolved = []
 
         for symbol in symbols:
-            print(f"DEBUG: Looking for symbol='{symbol}' in project='{project_name}'")
             nodes = self.graph_db_service.find_nodes_by_name(
                 name=symbol,
                 project_name=project_name,
                 limit=3,
             )
-            print(f"DEBUG: Found {len(nodes)} nodes")
             resolved.extend(nodes)
 
         return resolved
