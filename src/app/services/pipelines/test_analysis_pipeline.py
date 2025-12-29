@@ -8,7 +8,7 @@ from src.app.dtos.test import TestGapFinding
 from src.app.services.code_analysis_service import CodeAnalysisService
 from src.app.services.file_metadata_service import is_file_recently_modified
 from src.app.services.graph_db_service import GraphDBService
-from src.app.services.llm_service import extract_class_method, general_model_chat, general_model_chat_stream
+from src.app.services.llm_service import extract_class_method, general_model_chat_stream
 
 
 class TestAnalysisPipeline:

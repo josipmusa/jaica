@@ -337,9 +337,44 @@ Each service field (`vector_db`, `graph_db`, `llm`) can be:
 - `"disconnected"`: Service is not reachable
 - `"error: {details}"`: Service connection failed with specific error
 
+#### 3. Projects Endpoint
+
+**GET** `/api/projects`
+
+List all projects in the graph database.
+
+**Response:**
+```json
+{
+  "projects": [
+    {
+      "name": "my-app",
+      "node_count": 150
+    },
+    {
+      "name": "auth-service",
+      "node_count": 45
+    }
+  ],
+  "count": 2
+}
+```
+
+**Fields:**
+- `projects`: Array of project objects
+  - `name`: The project name
+  - `node_count`: Number of code nodes (classes, methods, functions) in the project
+- `count`: Total number of projects
+
 ### Query Examples
 
 ```bash
+# List all projects
+curl http://localhost:8000/api/projects
+
+# Check API status
+curl http://localhost:8000/api/status
+
 # Semantic code search with streaming
 curl -X POST http://localhost:8000/api/chat/stream \
   -H "Content-Type: application/json" \
