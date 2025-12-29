@@ -1,10 +1,11 @@
+import json
 from typing import List, Tuple, Optional
 
-from src.app.dtos.chat import ChatRequest, DependencyGraph, DependencyEdge
+from src.app.dtos.chat import ChatRequest, DependencyGraph, DependencyEdge, ContentChunk, MetadataChunk
 from src.app.dtos.graph import GraphQueryPlan
+from src.app.dtos.intent import Intent
 from src.app.services.graph_db_service import GraphDBService
-from src.app.services.llm_service import extract_graph_query_plan, general_model_chat
-
+from src.app.services.llm_service import extract_graph_query_plan, general_model_chat, general_model_chat_stream
 
 UI_MAX_EDGES_PER_NODE=5
 
@@ -12,7 +13,46 @@ class GraphReasoningPipeline:
     def __init__(self, graph_db_service: GraphDBService):
         self.graph_db_service = graph_db_service
 
-    def run(self, chat_request: ChatRequest) -> Tuple[Optional[str], Optional[DependencyGraph]]:
+    def run(self, chat_request: ChatRequest):
+        plan = extract_graph_query_plan(chat_request.prompt)
+
+        # Not a graph question
+        if not plan:
+            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+            return
+
+        nodes = self._resolve_nodes(
+            symbols=plan.symbols,
+            project_name=chat_request.project_name,
+        )
+
+        # Graph question, but no symbols resolved
+        if not nodes:
+            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+            return
+
+        contexts, dependency_graph = self._traverse(nodes, plan)
+
+        # No graph edges worth showing
+        if not dependency_graph or not dependency_graph.edges:
+            content_chunk = ContentChunk(content="Sorry, I can't answer that question")
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+            return
+
+        metadata_chunk = MetadataChunk(
+            intent=Intent.CODE_GRAPH_REASONING,
+            dependencyGraph=dependency_graph
+        )
+        yield json.dumps(metadata_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+
+        graph_prompt = self._get_graph_prompt(chat_request.prompt, contexts)
+        for chunk in general_model_chat_stream(graph_prompt):
+            content_chunk = ContentChunk(content=chunk)
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
+
+    def run_for_hybrid(self, chat_request: ChatRequest) -> Tuple[Optional[str], Optional[DependencyGraph]]:
         plan = extract_graph_query_plan(chat_request.prompt)
 
         # Not a graph question
@@ -34,7 +74,8 @@ class GraphReasoningPipeline:
         if not dependency_graph or not dependency_graph.edges:
             return None, None
 
-        answer = self._reason(chat_request.prompt, contexts)
+        graph_prompt = self._get_graph_prompt(chat_request.prompt, contexts)
+        answer = general_model_chat(graph_prompt)
 
         return answer, dependency_graph
 
@@ -42,13 +83,11 @@ class GraphReasoningPipeline:
         resolved = []
 
         for symbol in symbols:
-            print(f"DEBUG: Looking for symbol='{symbol}' in project='{project_name}'")
             nodes = self.graph_db_service.find_nodes_by_name(
                 name=symbol,
                 project_name=project_name,
                 limit=3,
             )
-            print(f"DEBUG: Found {len(nodes)} nodes")
             resolved.extend(nodes)
 
         return resolved
@@ -127,7 +166,8 @@ class GraphReasoningPipeline:
 
         return "\n".join(lines)
 
-    def _reason(self, user_prompt: str, contexts: List[str]) -> str:
+
+    def _get_graph_prompt(self, user_prompt: str, contexts: List[str]):
         prompt = f"""
 User question:
 {user_prompt}
@@ -138,4 +178,4 @@ Code information:
 Answer the user's question using the provided code information. 
 Do not mention the code or the fact that it was provided to you; just answer concisely and authoritatively.
     """
-        return general_model_chat(prompt)
+        return prompt

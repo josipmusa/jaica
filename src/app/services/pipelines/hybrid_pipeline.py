@@ -1,7 +1,10 @@
-from src.app.dtos.chat import ChatRequest, RetrievedFile, DependencyGraph
+import json
+
+from src.app.dtos.chat import ChatRequest, RetrievedFile, DependencyGraph, MetadataChunk, ContentChunk
+from src.app.dtos.intent import Intent
 from src.app.services.pipelines.graph_pipeline import GraphReasoningPipeline
 from src.app.services.pipelines.rag_pipeline import RagPipeline
-from src.app.services.llm_service import general_model_chat
+from src.app.services.llm_service import general_model_chat, general_model_chat_stream
 from src.app.configuration.config import HYBRID_SYSTEM_PROMPT
 
 
@@ -10,9 +13,16 @@ class HybridPipeline:
         self.rag_pipeline = rag_pipeline
         self.graph_pipeline = graph_pipeline
 
-    def run(self, chat_request: ChatRequest) -> tuple[str, list[RetrievedFile], DependencyGraph]:
-        graph_context, dependency_graph = self.graph_pipeline.run(chat_request)
-        rag_context, retrieved_files = self.rag_pipeline.run(chat_request)
+    def run(self, chat_request: ChatRequest):
+        graph_context, dependency_graph = self.graph_pipeline.run_for_hybrid(chat_request)
+        rag_context, retrieved_files = self.rag_pipeline.run_for_hybrid(chat_request)
+
+        metadata_chunk = MetadataChunk(
+            intent=Intent.CODE_HYBRID,
+            retrievedFiles=retrieved_files,
+            dependencyGraph=dependency_graph
+        )
+        yield json.dumps(metadata_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
 
         prompt_sections = [f"User question:\n{chat_request.prompt}"]
 
@@ -36,5 +46,6 @@ class HybridPipeline:
 
         combined_prompt = "\n\n".join(prompt_sections)
 
-        answer = general_model_chat(prompt=combined_prompt, system_prompt=HYBRID_SYSTEM_PROMPT)
-        return answer, retrieved_files, dependency_graph
+        for chunk in general_model_chat_stream(prompt=combined_prompt, system_prompt=HYBRID_SYSTEM_PROMPT):
+            content_chunk = ContentChunk(content=chunk)
+            yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"

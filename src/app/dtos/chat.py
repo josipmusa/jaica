@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Literal, Union
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -28,16 +28,13 @@ class DependencyGraph(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-class ChatResponse(BaseModel):
-    answer: str
-    intent: Intent
-    retrieved_files: Optional[List[RetrievedFile]] = Field(
-        default=None,
-        alias="retrievedFiles",
-    )
-    dependency_graph: Optional[DependencyGraph] = Field(
-        default=None,
-        alias="dependencyGraph",
-    )
+class MetadataChunk(BaseModel):
+    type: Literal["metadata"] = "metadata"
+    intent: str
+    retrieved_files: Optional[List[RetrievedFile]] = Field(default=None, alias="retrievedFiles")
+    dependency_graph: Optional[DependencyGraph] = Field(default=None, alias="dependencyGraph")
 
-    model_config = ConfigDict(populate_by_name=True)
+
+class ContentChunk(BaseModel):
+    type: Literal["content"] = "content"
+    content: str
