@@ -240,7 +240,10 @@ Rules:
 - Be concise, concrete, and actionable
 - Prefer practical testing advice over theory
 
-If no test gaps are present, say so clearly.
+If the section "Identified test gaps" is "NONE":
+- Respond with exactly:
+  "No test gaps were identified based on the provided analysis."
+- Do NOT provide any additional commentary or advice.
 """
 HYBRID_SYSTEM_PROMPT = """
 You are a senior software engineer and AI coding assistant.

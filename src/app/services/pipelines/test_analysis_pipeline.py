@@ -29,9 +29,6 @@ class TestAnalysisPipeline:
             yield json.dumps(content_chunk.model_dump(by_alias=True, exclude_none=False)) + "\n"
 
     def _find_test_gaps(self, chat_request: ChatRequest) -> List[TestGapFinding]:
-        if chat_request.project_name is None:
-            print(f"Project name is required for test analysis pipeline")
-
         extracted_entities = extract_class_method(chat_request.prompt)
         if extracted_entities.class_name is None and extracted_entities.method_name is None:
             return []
@@ -134,15 +131,17 @@ class TestAnalysisPipeline:
         return None
 
     def _get_test_analysis_prompt(self, findings: list[TestGapFinding], prompt: str) -> str:
-        lines = []
-        for f in findings:
-            lines.append(
-                f"""- Method: {f.method_name} (Class: {f.class_name or "module-level"})
+        formatted_findings = "NONE"
+        if findings:
+            lines = []
+            for f in findings:
+                lines.append(
+                    f"""- Method: {f.method_name} (Class: {f.class_name or "module-level"})
 Reasons:
 - {chr(10).join(f.reasons)}
 Suggested focus: {f.suggested_focus or "N/A"}"""
-            )
-        formatted_findings = "\n".join(lines)
+                )
+            formatted_findings = "\n".join(lines)
 
         modified_prompt = f"""
 User question:
