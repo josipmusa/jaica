@@ -43,6 +43,7 @@ services:
       NEO4J_PASSWORD: qwerty
       CHROMA_HOST: chromadb
       CHROMA_PORT: 8000
+      OLLAMA_HOST: http://host.docker.internal:11434
     depends_on:
       - neo4j
       - chromadb
