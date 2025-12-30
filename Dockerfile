@@ -7,8 +7,8 @@ WORKDIR /app
 # Install system dependencies if needed
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y --no-install-recommends build-essential
+RUN apt-get install -y curl
 RUN rm -rf /var/lib/apt/lists/*
-
 
 # Copy dependency files first (for caching)
 COPY requirements.txt ./
